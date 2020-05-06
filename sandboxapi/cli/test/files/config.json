@@ -1,0 +1,22 @@
+{
+  "sandboxes": {
+    "cuckoo": {
+      "host": "example.com",
+      "port": 5555,
+      "username": "john",
+      "password": "doe",
+      "use_https": true,
+      "timeout": 70,
+      "verify_ssl": true
+    },
+    "falcon": {
+      "host": "example.com",
+      "environment": "WIN7HWP",
+      "timeout": 70,
+      "verify_ssl": true,
+      "proxies": {
+        "https": "http://proxy.com"
+      }
+    }
+  }
+}

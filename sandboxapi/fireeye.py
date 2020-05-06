@@ -1,19 +1,346 @@
-from __future__ import print_function
+"""This module hosts the FireEye Sandbox class."""
 
-import sys
-import time
 import json
+from pathlib import Path
+from typing import Union
 
+import requests
 from requests.auth import HTTPBasicAuth
 
-import sandboxapi
+from sandboxapi.base import Sandbox, SandboxAPI, SandboxError
 
-class FireEyeAPI(sandboxapi.SandboxAPI):
+
+# Environments
+WINXP = 'winxp-sp3'
+WIN7 = 'win7-sp1'
+WIN7X64 = 'win7x64-sp1'
+
+
+class FireEyeSandbox(Sandbox):
+    """Represents the FireEye Sandbox API.
+
+    :param username: A valid user.
+    :param password: The user's password.
+    :param host: The IP address or hostname of the FireEye appliance.
+    :param port: The port the web service api is running on.
+    :param environment: The sandbox environment to use.
+    :param legacy_api: Use the older api if True, otherwise False.
+    """
+
+    __slots__ = ['_api_token', '_auth', '_headers', 'profile']
+
+    def __init__(
+            self,
+            username: str = '',
+            password: str = '',
+            host: str = 'localhost',
+            port: int = 443,
+            environment: str = WINXP,
+            legacy_api: bool = False,
+            **kwargs,
+    ) -> None:
+        """Instantiate a new FireEyeSandbox object."""
+        super().__init__(alias=Path(__file__).stem, **kwargs)
+        username = self._set_attribute(username, '', 'username')
+        password = self._set_attribute(password, '', 'password')
+        host = self._set_attribute(host, 'localhost', 'host')
+        host = self._format_host(host)
+        port = self._set_attribute(port, 443, 'port')
+        environment = self._set_attribute(environment, WINXP, 'environment')
+        legacy_api = self._set_attribute(legacy_api, False, 'legacy_api')
+        if legacy_api:
+            base_url = 'https://{}:{}/wsapis/v1.1.0'.format(host, port)
+        else:
+            base_url = 'https://{}:{}/wsapis/v1.2.0'.format(host, port)
+        self.base_url = base_url
+        self._api_token = ''
+        self._auth = HTTPBasicAuth(username, password)
+        self._headers = {
+            'Accept': 'application/json',
+        }
+        self.profile = environment
+
+    def _authenticate(self) -> None:
+        """Authenticates the user credentials and sets the returned api token."""
+        if self.has_token:
+            return
+        response = requests.post(
+            '{}/auth/login'.format(self.base_url),
+            auth=self._auth,
+            **self._request_opts,
+        )
+
+        if response.status_code == requests.codes.unauthorized:
+            raise SandboxError('Authentication failed - HTTP {}'.format(response.status_code))
+        elif response.status_code == requests.codes.unavailable:
+            raise SandboxError('Sandbox unavailable - HTTP {}'.format(response.status_code))
+
+        self._api_token = response.headers.get('X-FeApi-Token')
+        self._headers['X-FeApi-Token'] = self._api_token
+
+    # def analyze(self, handle: IO[Any], filename: str) -> int:
+    #     """A wrapper method for the new submit_sample() method. This method will be deprecated in a future version.
+    #
+    #     .. deprecated:: 2.0.0
+    #
+    #     :param handle: A file-like object.
+    #     :param filename: The name of the file.
+    #     :return: The item ID of the submitted sample.
+    #     """
+    #     warnings.warn('The analyze() method is deprecated in favor of submit_sample().', DeprecationWarning)
+    #     handle.seek(0)
+    #     self._authenticate()
+    #     fireeye_options = {
+    #         'application': 0,
+    #         'timeout': 500,
+    #         'priority': 0,
+    #         'profiles': self.profile,
+    #         'analysistype': 0,
+    #         'force': True,
+    #         'prefetch': 1,
+    #     }
+    #     response = requests.post(
+    #         '{}/submissions'.format(self.base_url),
+    #         headers=self._headers,
+    #         data={'options': json.dumps(fireeye_options)},
+    #         files={'file': (filename, handle)},
+    #         **self._request_opts,
+    #     )
+    #     if response.status_code == requests.codes.bad_request:
+    #         raise SandboxError('{}'.format(response.content))
+    #     elif response.status_code != requests.codes.ok:
+    #         raise SandboxError('{}: {}'.format(response.status_code, response.content))
+    #
+    #     output = self.decode(response)
+    #     if isinstance(output, list):
+    #         item_id = int(output[0].get('ID', 0))
+    #     else:
+    #         item_id = int(output.get('ID', 0))
+    #     return item_id
+
+    def submit_sample(self, filepath: Union[str, Path]) -> int:
+        """Submit a new sample to the FireEye sandbox for analysis.
+
+        :param filepath: The path to the sample to submit.
+        :return: The submission key for the submitted sample.
+        """
+        self._authenticate()
+        fireeye_options = {
+            'application': 0,
+            'timeout': 500,
+            'priority': 0,
+            'profiles': self.profile,
+            'analysistype': 0,
+            'force': True,
+            'prefetch': 1,
+        }
+        with self._get_file(filepath) as file:
+            response = requests.post(
+                '{}/submissions'.format(self.base_url),
+                headers=self._headers,
+                data={'options': json.dumps(fireeye_options)},
+                files={'file': file},
+                **self._request_opts,
+            )
+
+        if response.status_code == requests.codes.bad_request:
+            raise SandboxError('{}'.format(response.content))
+        elif response.status_code != requests.codes.ok:
+            raise SandboxError('{}: {}'.format(response.status_code, response.content))
+
+        output = self.decode(response)
+        if isinstance(output, list):
+            item_id = int(output[0].get('ID', 0))
+        else:
+            item_id = int(output.get('ID', 0))
+        return item_id
+
+    def check_item_status(self, item_id: Union[int, str]) -> bool:
+        """Check to see if a particular sample analysis is complete.
+
+        :param item_id: The submission key.
+        :return: True if the report is ready, otherwise False.
+        """
+        self._authenticate()
+        response = requests.post(
+            '{}/submissions/status/{}'.format(self.base_url, item_id),
+            headers=self._headers,
+            **self._request_opts,
+        )
+
+        if response.status_code == requests.codes.unauthorized:
+            raise SandboxError('Action is unauthorized.')
+        elif response.status_code == requests.codes.not_found:
+            raise SandboxError('Invalid submission key.')
+
+        output = self.decode(response)
+        status = output.get('submissionStatus')
+        if status and status == 'Done':
+            return True
+        elif status and status == 'In Progress':
+            return False
+        else:
+            raise SandboxError('Submission not found.')
+
+    @property
+    def available(self) -> bool:
+        """Checks to see if the FireEye sandbox is up and running.
+
+        :return: True if the FireEye sandbox is responding, otherwise False.
+        """
+        self._authenticate()
+        response = requests.get(
+            '{}/config'.format(self.base_url),
+            headers=self._headers,
+            **self._request_opts,
+        )
+        if response.status_code == requests.codes.unauthorized:
+            raise SandboxError('Action is unauthorized.')
+        return True if response.status_code == requests.codes.ok else False
+
+    def report(self, item_id: Union[int, str]) -> dict:
+        """Pulls the threat report from FireEye for the submitted sample.
+
+        :param item_id: The submission key.
+        :return: The threat report.
+        """
+        self._authenticate()
+        info_level = {'info_level': 'extended'}
+        response = requests.post(
+            '{}/submissions/results/{}'.format(self.base_url, item_id),
+            headers=self._headers,
+            data=info_level,
+            **self._request_opts,
+        )
+
+        if response.status_code == requests.codes.unauthorized:
+            raise SandboxError('Action is unauthorized.')
+        elif response.status_code == requests.codes.not_found:
+            raise SandboxError('Invalid submission key.')
+
+        return self.decode(response)
+
+    def xml_report(self, item_id: Union[int, str]) -> bytes:
+        """Pulls the threat report from FireEye for the submitted sample as an XML file.
+
+        :param item_id: The submission key.
+        :return: The XML threat report.
+        """
+        self._authenticate()
+        headers = {
+            'Accept': 'application/xml',
+            'X-FeApi-Token': self._api_token,
+        }
+        info_level = {'info_level': 'extended'}
+        response = requests.post(
+            '{}/submissions/results/{}'.format(self.base_url, item_id),
+            headers=headers,
+            data=info_level,
+            **self._request_opts,
+        )
+
+        if response.status_code == requests.codes.unauthorized:
+            raise SandboxError('Action is unauthorized.')
+        elif response.status_code == requests.codes.not_found:
+            raise SandboxError('Invalid submission key.')
+
+        return response.content
+
+    def score(self, report: dict) -> int:
+        """Get the threat score for the submitted sample.
+
+        :param report: The report returned from FireEye for the submitted sample.
+        :return: The threat score.
+        """
+        self._authenticate()
+        score = 0
+        alert = report['alert']
+        if isinstance(alert, list):
+            severity = alert[0].get('severity', '')
+            if severity == 'MAJR':
+                score = 8
+            elif severity == 'MINR':
+                score = 2
+        return score
+
+    def logout(self) -> None:
+        """Disables the API token."""
+        self._authenticate()
+        response = requests.post(
+            '{}/auth/logout'.format(self.base_url),
+            headers=self._headers,
+            **self._request_opts,
+        )
+        if response.status_code != requests.codes.no_content:
+            raise SandboxError('{}: {}'.format(response.content.decode("utf-8"), response.status_code))
+        self._api_token = ''
+
+    @property
+    def has_token(self) -> bool:
+        """Check to see if the FireEyeSandbox object has an api token or not."""
+        return True if self._api_token else False
+
+
+# class FireEyeAPI(FireEyeSandbox):
+#     """Legacy FireEye Sandbox class used for backwards compatibility.
+#
+#     .. deprecated:: 2.0.0
+#
+#     :param username: The sandbox user.
+#     :param password: The user's password.
+#     :param url: FireEye API URL.
+#     :param profile: The sandbox environment to use.
+#     :param legacy_api: Use the v1.1 API if True, otherwise use v1.2.
+#     :param verify_ssl: Verify SSL Certificates if True, otherwise ignore self-signed certificates.
+#     """
+#
+#     def __init__(
+#             self,
+#             username: str,
+#             password: str,
+#             url: str,
+#             profile: str,
+#             legacy_api: bool = False,
+#             verify_ssl: bool = True,
+#             **kwargs,
+#     ) -> None:
+#         """Initialize the interface to FireEye Sandbox API."""
+#         warnings.warn('The FireEyeAPI class is deprecated in favor of CuckooSandbox.', DeprecationWarning)
+#         api = ''
+#         profile = profile or 'winxp-sp3'
+#         port = 443
+#         if '://' in url:
+#             _, host = url.split('//', maxsplit=1)
+#         else:
+#             host = url
+#         if ':' in host:
+#             host, port = host.split(':', maxsplit=1)
+#             if '/' in port:
+#                 port, api = port.split('/', maxsplit=1)
+#         elif '/' in host:
+#             host, api = host.split('/', maxsplit=1)
+#         if 'v1.1.0' in api:
+#             legacy_api = True
+#         super().__init__(
+#             username=username,
+#             password=password,
+#             host=host,
+#             port=int(port),
+#             environment=profile,
+#             legacy_api=legacy_api,
+#             verify_ssl=verify_ssl,
+#             **kwargs,
+#         )
+#         if api:
+#             self.base_url = 'https://{}:{}/{}'.format(host, port, api)
+
+
+class FireEyeAPI(SandboxAPI):
     """FireEye Sandbox API wrapper."""
 
     def __init__(self, username, password, url, profile, legacy_api=False, verify_ssl=True, **kwargs):
         """Initialize the interface to FireEye Sandbox API."""
-        sandboxapi.SandboxAPI.__init__(self, **kwargs)
+        SandboxAPI.__init__(self, **kwargs)
 
         self.base_url = url
         self.username = username
@@ -44,16 +371,16 @@ class FireEyeAPI(sandboxapi.SandboxAPI):
 
         if not self.api_token:
             # need to log in
-            response = sandboxapi.SandboxAPI._request(self, '/auth/login', 'POST', headers=headers,
-                                                      auth=HTTPBasicAuth(self.username, self.password))
+            response = SandboxAPI._request(self, '/auth/login', 'POST', headers=headers,
+                                                 auth=HTTPBasicAuth(self.username, self.password))
             if response.status_code != 200:
-                raise sandboxapi.SandboxError("Can't log in, HTTP Error {e}".format(e=response.status_code))
+                raise SandboxError("Can't log in, HTTP Error {e}".format(e=response.status_code))
             # we are now logged in, save the token
             self.api_token = response.headers.get('X-FeApi-Token')
 
         headers['X-FeApi-Token'] = self.api_token
 
-        response = sandboxapi.SandboxAPI._request(self, uri, method, params, files, headers)
+        response = SandboxAPI._request(self, uri, method, params, files, headers)
 
         # handle session timeout
         unauthorized = False
@@ -96,7 +423,8 @@ class FireEyeAPI(sandboxapi.SandboxAPI):
         # add submission options
         data = {
             #FIXME: These may need to change, see docs page 36
-            'options': '{"application":"0","timeout":"500","priority":"0","profiles":["%s"],"analysistype":"0","force":"true","prefetch":"1"}' % self.profile,
+            'options': '{"application":"0","timeout":"500","priority":"0","profiles":["%s"],'
+                       '"analysistype":"0","force":"true","prefetch":"1"}' % self.profile,
         }
 
         response = self._request("/submissions", method='POST', params=data, files=files)
@@ -109,9 +437,9 @@ class FireEyeAPI(sandboxapi.SandboxAPI):
                 except TypeError:
                     return response.json()[0]['ID']
             else:
-                raise sandboxapi.SandboxError("api error in analyze ({u}): {r}".format(u=response.url, r=response.content))
+                raise SandboxError("api error in analyze ({u}): {r}".format(u=response.url, r=response.content))
         except (ValueError, KeyError) as e:
-            raise sandboxapi.SandboxError("error in analyze: {e}".format(e=e))
+            raise SandboxError("error in analyze: {e}".format(e=e))
 
     def check(self, item_id):
         """Check if an analysis is complete.
@@ -134,7 +462,7 @@ class FireEyeAPI(sandboxapi.SandboxAPI):
                 return True
 
         except ValueError as e:
-            raise sandboxapi.SandboxError(e)
+            raise SandboxError(e)
 
         return False
 
@@ -161,7 +489,7 @@ class FireEyeAPI(sandboxapi.SandboxAPI):
                     self.server_available = True
                     return True
 
-            except sandboxapi.SandboxError:
+            except SandboxError:
                 pass
 
         self.server_available = False
@@ -208,73 +536,3 @@ class FireEyeAPI(sandboxapi.SandboxAPI):
         """The FireEye AX has a limit of 100 concurrent sessions, so be sure to logout"""
         if self.api_token:
             self._request("/auth/logout")
-
-
-def fireeye_loop(fireeye, filename):
-    # test run
-    with open(arg, "rb") as handle:
-        fileid = fireeye.analyze(handle, filename)
-        print("file {f} submitted for analysis, id {i}".format(f=filename, i=fileid))
-
-    while not fireeye.check(fileid):
-        print("not done yet, sleeping 10 seconds...")
-        time.sleep(10)
-
-    print("analysis complete. fetching report...")
-    print(fireeye.report(fileid))
-
-
-if __name__ == "__main__":
-
-    def usage():
-        msg = "%s: <url> <username> <password> <submit <fh> | available | report <id> | analyze <fh>"
-        print(msg % sys.argv[0])
-        sys.exit(1)
-
-    if len(sys.argv) == 5:
-        cmd = sys.argv.pop().lower()
-        password = sys.argv.pop()
-        username = sys.argv.pop()
-        url = sys.argv.pop()
-        arg = None
-
-    elif len(sys.argv) == 6:
-        arg = sys.argv.pop()
-        cmd = sys.argv.pop().lower()
-        password = sys.argv.pop()
-        username = sys.argv.pop()
-        url = sys.argv.pop()
-
-    else:
-        usage()
-
-    # instantiate FireEye Sandbox API interface.
-    fireeye = FireEyeAPI(username, password, url, 'winxp-sp3')
-
-    # process command line arguments.
-    if "submit" in cmd:
-        if arg is None:
-            usage()
-        else:
-            with open(arg, "rb") as handle:
-                print(fireeye.analyze(handle, arg))
-
-    elif "available" in cmd:
-        print(fireeye.is_available())
-
-    elif "report" in cmd:
-        if arg is None:
-            usage()
-        else:
-            print(fireeye.report(arg))
-
-    elif "analyze" in cmd:
-        if arg is None:
-            usage()
-        else:
-            fireeye_loop(fireeye, arg)
-
-    else:
-        usage()
-
-    fireeye.logout()

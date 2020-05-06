@@ -1,11 +1,226 @@
-from __future__ import print_function
+"""This module hosts the Cuckoo Sandbox class."""
 
-import sys
 import json
+from pathlib import Path
+from typing import Any, List, Union
 
-import sandboxapi
+import requests
+from requests.auth import HTTPBasicAuth
 
-class CuckooAPI(sandboxapi.SandboxAPI):
+from sandboxapi.base import Sandbox, SandboxAPI, SandboxError
+
+
+class CuckooSandbox(Sandbox):
+    """Represents the Cuckoo Sandbox API.
+
+    :param username: A valid user if using authentication.
+    :param password: The user's password if using authentication.
+    :param host: The IP address or hostname of the Cuckoo server.
+    :param port: The port of the Cuckoo server.
+    :param use_https: Use https if True, otherwise use http.
+    """
+
+    __slots__ = ['_request_opts']
+
+    def __init__(
+            self,
+            username: str = '',
+            password: str = '',
+            host: str = 'localhost',
+            port: int = 8090,
+            use_https: bool = False,
+            **kwargs,
+    ) -> None:
+        """Instantiate a new CuckooSandbox object."""
+        super().__init__(alias=Path(__file__).stem, **kwargs)
+        username = self._set_attribute(username, '', 'username')
+        password = self._set_attribute(password, '', 'password')
+        host = self._set_attribute(host, 'localhost', 'host')
+        host = self._format_host(host)
+        port = self._set_attribute(port, 8090, 'port')
+        use_https = self._set_attribute(use_https, False, 'use_https')
+        if use_https:
+            scheme = 'https'
+        else:
+            scheme = 'http'
+        self.base_url = '{}://{}:{}'.format(scheme, host, port)
+        if username and password:
+            self._request_opts['auth'] = HTTPBasicAuth(username, password)
+
+    def enqueued(self) -> List[Any]:
+        """Lists all tasks on the Cuckoo server."""
+        response = requests.get(
+            '{}/tasks/list'.format(self.base_url),
+            **self._request_opts,
+        )
+        output = self.decode(response)
+        return output['tasks']
+
+    # def analyze(self, handle: IO[Any], filename: str) -> str:
+    #     """A wrapper method for the new submit_sample() method. This method will be deprecated in a future version.
+    #
+    #     .. deprecated:: 2.0.0
+    #
+    #     :param handle: A file-like object.
+    #     :param filename: The name of the file.
+    #     :return: The item ID of the submitted sample.
+    #     """
+    #     warnings.warn('The analyze() method is deprecated in favor of submit_sample().', DeprecationWarning)
+    #     handle.seek(0)
+    #     response = requests.post(
+    #         '{}/task/create/file'.format(self.base_url),
+    #         files={'file': (filename, handle)},
+    #         **self._request_opts,
+    #     )
+    #
+    #     if response.status_code != requests.codes.ok:
+    #         raise SandboxError('{}: {}'.format(response.content, response.status_code))
+    #
+    #     output = self.decode(response)
+    #     return output['task_id']
+
+    def submit_sample(self, filepath: Union[str, Path]) -> str:
+        """Submit a new sample to the Cuckoo sandbox for analysis.
+
+        :param filepath: The path to the sample to submit.
+        :return: The ID of the created task.
+        """
+        with self._get_file(filepath) as file:
+            response = requests.post(
+                '{}/task/create/file'.format(self.base_url),
+                files={'file': file},
+                **self._request_opts,
+            )
+
+        if response.status_code != requests.codes.ok:
+            raise SandboxError('{}: {}'.format(response.content, response.status_code))
+
+        output = self.decode(response)
+        return output['task_id']
+
+    def check_item_status(self, item_id: Union[int, str]) -> bool:
+        """Check to see if a particular sample analysis is complete.
+
+        :param item_id: The task ID of the sample to check.
+        :return: True if the sample analysis is ready, otherwise False.
+        """
+        response = requests.get(
+            '{}/tasks/view/{}'.format(self.base_url, item_id),
+            **self._request_opts,
+        )
+
+        if response.status_code == requests.codes.not_found:
+            raise SandboxError('Task ID {} not found.'.format(item_id))
+        elif response.status_code != requests.codes.ok:
+            raise SandboxError('{}: {}'.format(response.content, response.status_code))
+
+        output = self.decode(response)
+        status = output['task']['status']
+        if status and status in {'completed', 'reported'}:
+            return True
+        else:
+            return False
+
+    def delete_item(self, item_id: int) -> bool:
+        """Remove a task from the list of tasks on the Cuckoo server.
+
+        :param item_id: The task ID of the sample to remove.
+        :return: True if the task was successfully removed.
+        """
+        response = requests.get(
+            '{}/tasks/delete/{}'.format(self.base_url, item_id),
+            **self._request_opts,
+        )
+
+        if response.status_code == requests.codes.not_found:
+            raise SandboxError('Task ID {} not found.'.format(item_id))
+        elif response.status_code == requests.codes.server_error:
+            raise SandboxError('Could not delete task ID {}.'.format(item_id))
+        elif response.status_code != requests.codes.ok:
+            raise SandboxError('Server Error: {}'.format(response.status_code))
+
+        return True
+
+    @property
+    def available(self) -> bool:
+        """Checks to see if the Cuckoo sandbox is up and running.
+
+        :return: True if the Cuckoo sandbox is responding, otherwise False.
+        """
+        response = requests.get(
+            '{}/cuckoo/status'.format(self.base_url),
+            **self._request_opts,
+        )
+        return True if response.status_code == requests.codes.ok else False
+
+    @property
+    def queue_size(self) -> int:
+        """Checks to see how many tasks are currently pending on the Cuckoo server.
+
+        :return: The number of pending tasks on the Cuckoo server.
+        """
+        tasks = self.enqueued()
+        return len([t for t in tasks if t.get('status', '') in {'pending', 'running'}])
+
+    def report(self, item_id: Union[int, str]) -> dict:
+        """Pulls the threat report from Cuckoo for the submitted sample.
+
+        :param item_id: The task ID for the submitted sample.
+        :return: The threat report.
+        """
+        response = requests.get(
+            '{}/tasks/report/{}/json'.format(self.base_url, item_id),
+            **self._request_opts,
+        )
+        output = self.decode(response)
+
+        if response.status_code == requests.codes.not_found:
+            raise SandboxError('Task ID {} not found.'.format(item_id))
+        elif response.status_code != requests.codes.ok:
+            raise SandboxError('{}: {}'.format(response.content.decode("utf-8"), response.status_code))
+        return output
+
+    def score(self, report: dict) -> int:
+        """Get the threat score for the submitted sample.
+
+        :param report: The report returned from Cuckoo for the submitted sample.
+        :return: The threat score.
+        """
+        score = report.get('malscore')
+        if score is None:
+            score = report['info']['score']
+        return score
+
+
+# class CuckooAPI(CuckooSandbox):
+#     """Legacy Cuckoo Sandbox class used for backwards compatibility.
+#
+#     .. deprecated:: 2.0.0
+#
+#     :param url: Cuckoo API URL or host.
+#     :param port: The Cuckoo API port.
+#     :param api_path: The endpoint to reach the Cuckoo API.
+#     """
+#
+#     def __init__(self, url: str, port: int = 8090, api_path: str = '/', verify_ssl: bool = False, **kwargs) -> None:
+#         """Initialize the interface to Cuckoo Sandbox API with host and port."""
+#         warnings.warn('The CuckooAPI class is deprecated in favor of CuckooSandbox.', DeprecationWarning)
+#         if '://' in url:
+#             _, host = url.split('//', maxsplit=1)
+#         else:
+#             host = url
+#         if ':' in host:
+#             host, port = host.split(':', maxsplit=1)
+#         if '/' in host:
+#             host, api_path = host.split('/', maxsplit=1)
+#         super().__init__(host=host, port=int(port), verify_ssl=verify_ssl, **kwargs)
+#         if api_path != '/':
+#             if not api_path.startswith('/'):
+#                 api_path = '/{}'.format(api_path)
+#             self.base_url = 'http://{}:{}{}'.format(host, port, api_path)
+
+
+class CuckooAPI(SandboxAPI):
     """Cuckoo Sandbox API wrapper."""
 
     def __init__(self, url, port=8090, api_path='/', verify_ssl=False, **kwargs):
@@ -19,7 +234,7 @@ class CuckooAPI(sandboxapi.SandboxAPI):
         :type  api_path: str
         :param api_path: DEPRECATED! Use fully formed url instead. Will be removed in future version.
         """
-        sandboxapi.SandboxAPI.__init__(self, **kwargs)
+        SandboxAPI.__init__(self, **kwargs)
 
         if not url:
             url = ''
@@ -94,7 +309,7 @@ class CuckooAPI(sandboxapi.SandboxAPI):
                 return True
 
         except ValueError as e:
-            raise sandboxapi.SandboxError(e)
+            raise SandboxError(e)
 
         return False
 
@@ -113,7 +328,7 @@ class CuckooAPI(sandboxapi.SandboxAPI):
             if response.status_code == 200:
                 return True
 
-        except sandboxapi.SandboxError:
+        except SandboxError:
             pass
 
         return False
@@ -141,7 +356,7 @@ class CuckooAPI(sandboxapi.SandboxAPI):
                     self.server_available = True
                     return True
 
-            except sandboxapi.SandboxError:
+            except SandboxError:
                 pass
 
         self.server_available = False
@@ -199,63 +414,6 @@ class CuckooAPI(sandboxapi.SandboxAPI):
             # cuckoo-2.0 format
             score = report.get('info', {}).get('score', 0)
         except TypeError as e:
-            raise sandboxapi.SandboxError(e)
+            raise SandboxError(e)
 
         return score
-
-
-if __name__ == "__main__":
-
-    def usage():
-        msg = "%s: <host> <analyses | analyze <fh> | available | delete <id> | queue | report <id>"
-        print(msg % sys.argv[0])
-        sys.exit(1)
-
-    if len(sys.argv) == 3:
-        cmd = sys.argv.pop().lower()
-        host = sys.argv.pop().lower()
-        arg = None
-
-    elif len(sys.argv) == 4:
-        arg = sys.argv.pop()
-        cmd = sys.argv.pop().lower()
-        host = sys.argv.pop().lower()
-
-    else:
-        usage()
-
-    # instantiate Cuckoo Sandbox API interface.
-    cuckoo = CuckooAPI(host)
-
-    # process command line arguments.
-    if "analyses" in cmd:
-        for a in cuckoo.analyses():
-            print(a["id"], a["status"], a["tags"], a["target"])
-
-    elif "analyze" in cmd:
-        if arg is None:
-            usage()
-        else:
-            with open(arg, "rb") as handle:
-                print(cuckoo.analyze(handle, arg))
-
-    elif "available" in cmd:
-        print(cuckoo.is_available())
-
-    elif "delete" in cmd:
-        if arg is None:
-            usage()
-        else:
-            print(cuckoo.delete(arg))
-
-    elif "queue" in cmd:
-        print(cuckoo.queue_size())
-
-    elif "report" in cmd:
-        if arg is None:
-            usage()
-        else:
-            print(cuckoo.report(arg))
-
-    else:
-        usage()

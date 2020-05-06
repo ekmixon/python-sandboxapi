@@ -1,0 +1,137 @@
+{
+    "analysis": {
+        "arch": "WINDOWS",
+        "confidence": {
+            "expertadviceneeded": false,
+            "maxscore": 5,
+            "minscore": 0,
+            "score": 5
+        },
+        "contacted": {
+            "domains": {
+                "domain": [
+                    {
+                        "ip": "202.87.31.222",
+                        "malicious": true,
+                        "name": "jobmalawi.com"
+                    }
+                ]
+            },
+            "ips": {
+                "ip": [
+                    {
+                        "$": "185.165.153.143",
+                        "@malicious": "false"
+                    },
+                    {
+                        "$": "202.87.31.222",
+                        "@malicious": "true"
+                    }
+                ]
+            }
+        },
+        "cookbook": "defaultwindowsofficecookbook.jbs",
+        "detection": {
+            "clean": false,
+            "malicious": true,
+            "maxscore": 100,
+            "minscore": 0,
+            "score": 100,
+            "suspicious": false,
+            "unknown": false
+        },
+        "dropped": {
+            "file": [
+                {
+                    "malicious": false,
+                    "md5": "22A797615C1275856CAF45BC7E84A663",
+                    "name": "C:\\Users\\user\\AppData\\Local\\Microsoft\\Windows\\Temporary Internet Files\\Content.Word\\~WRS{45BACBB1-8931-4BE2-83F5-23229CFDFAF5}.tmp",
+                    "sha1": "4AAF84FCD8BBEA316FDCCF0220DB402AAA57A18F",
+                    "sha256": "8BA98AF656B2937078D82D1571559A442D42341656A19A05D0D6F9D139785920"
+                },
+                {
+                    "malicious": false,
+                    "md5": "5D4D94EE7E06BBB0AF9584119797B23A",
+                    "name": "C:\\Users\\user\\AppData\\Local\\Microsoft\\Windows\\Temporary Internet Files\\Content.Word\\~WRS{AEE3F313-1AF6-4F7F-866F-0279BDE9C0B7}.tmp",
+                    "sha1": "DBB111419C704F116EFA8E72471DD83E86E49677",
+                    "sha256": "4826C0D860AF884D3343CA6460B0006A7A2CE7DBCCC4D743208585D997CC5FD1"
+                },
+                {
+                    "malicious": true,
+                    "md5": "BB1B17B8BD05442C4FB62A063FC79442",
+                    "name": "C:\\Users\\user\\AppData\\Roaming\\7899000.com",
+                    "sha1": "CF4739CCE7B839153C2556929AAD2556AD7F2453",
+                    "sha256": "B5584335EAFEF964C95DC94DC1444A0DEEAAC6BCCAE18BDBB3B73CF9DBC20EE7"
+                },
+                {
+                    "malicious": false,
+                    "md5": "07C90BEE2FE67DD4BA5B9A4E11864866",
+                    "name": "C:\\Users\\user\\AppData\\Roaming\\Microsoft\\Office\\Recent\\abc.LNK",
+                    "sha1": "D09660913996D4FCD3E8E44F523A82B9B47FF29F",
+                    "sha256": "9E3B1CD97AD52615CB4FE8B7EA081F3B04DC974982CBF164F81CE295309F2A3B"
+                },
+                {
+                    "malicious": false,
+                    "md5": "3DCB49086E32DF09B4BE634EB931B894",
+                    "name": "C:\\Users\\user\\AppData\\Roaming\\Microsoft\\Office\\Recent\\index.dat",
+                    "sha1": "88F10DB465268ED960A14F949B7947F52C6BDE97",
+                    "sha256": "5B73C5249422D5738001281B9F1C36C009FA8F4700B96A545A7CB82943096AE5"
+                },
+                {
+                    "malicious": false,
+                    "md5": "889F12F1BC8D0C93219D4F6EC23549F7",
+                    "name": "C:\\Users\\user\\AppData\\Roaming\\Microsoft\\Templates\\~$Normal.dotm",
+                    "sha1": "873BFD9E27344B456553D722113253C689D19877",
+                    "sha256": "57284CC7D9B88FC30B4559C182E80352557C3FE04D91F4D8DEEBE2AA827A8EF6"
+                },
+                {
+                    "malicious": false,
+                    "md5": "F3B25701FE362EC84616A93A45CE9998",
+                    "name": "C:\\Users\\user\\AppData\\Roaming\\Microsoft\\UProof\\ExcludeDictionaryEN0409.lex",
+                    "sha1": "D62636D8CAEC13F04E28442A0A6FA1AFEB024BBB",
+                    "sha256": "B3D510EF04275CA8E698E5B3CBB0ECE3949EF9252F0CDC839E9EE347409A2209"
+                },
+                {
+                    "malicious": true,
+                    "md5": "AFE915995A690A69AB3F2D5F953F9E4F",
+                    "name": "C:\\Users\\user\\Desktop\\~$abc.doc",
+                    "sha1": "0D0F73E40AF18D6D4644DE89143DA4BC92667A66",
+                    "sha256": "26BF18D5615C537F64BD33AB5229DB14B8B08CFF2E00B4794E28F3FEB5EBB9EE"
+                }
+            ]
+        },
+        "errors": null,
+        "filetype": "Rich Text Format (5005/1) 55.56%",
+        "hashes": {
+            "md5": "3f5e1b65dd9c767baebaa31498462fcd",
+            "sha1": "ad1585cc43ac22a0e9bc505da699efb1afdd6c12",
+            "sha256": "4b504e06bedebe7462f307d399e4f1ff1bb891195c476586aad2f632644a2634"
+        },
+        "id": 989160,
+        "reporttype": "IR",
+        "sample": "abc.doc",
+        "signatures": {
+            "signare": [
+                "Contains functionality to hide a thread from the debugger",
+                "Contains functionality to log keystrokes",
+                "Drops PE files with a suspicious file extension",
+                "Hides threads from debuggers",
+                "Modifies the context of a thread in another process (thread injection)",
+                "Office equation editor drops PE file",
+                "Office equation editor starts processes (likely CVE 2017-11882 or CVE-2018-0802)",
+                "Antivirus or Machine Learning detection for sample",
+                "Detected unpacking (changes PE section rights)",
+                "Detected unpacking (overwrites its own PE header)",
+                "Malicious sample detected (through community Yara rule)",
+                "Snort IDS alert for network traffic (e.g. based on Emerging Threat rules)",
+                "Yara detected LokibotDropper",
+                "Yara detected Netwire RAT"
+            ]
+        },
+        "startdate": "01/11/2019",
+        "starttime": "06:28:19",
+        "system": "Windows 7 (<b>Office 2010 SP2</b>, Java 1.8.0_40 1.8.0_191, Flash 16.0.0.305, Acrobat Reader 11.0.08, Internet Explorer 11, Chrome 55, Firefox 43)",
+        "url": "",
+        "version": "28.0.0 Lapis Lazuli"
+    }
+}

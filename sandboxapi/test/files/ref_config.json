@@ -1,0 +1,18 @@
+{
+  "sandboxes": {
+    "cuckoo": {
+      "use_https": "true"
+    },
+    "vmray": {
+      "api_key": "12345678",
+      "proxies": {"https": "http://10.10.1.10:1080"},
+      "verify_ssl": "true"
+    },
+    "fireeye": {
+      "username": "maurice_moss",
+      "password": "tnetennba",
+      "host": "friendface.com",
+      "timeout": 10
+    }
+  }
+}

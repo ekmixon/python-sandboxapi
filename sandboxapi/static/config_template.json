@@ -1,0 +1,54 @@
+{
+  "sandboxes": {
+    "cuckoo": {
+      "host": "localhost",
+      "port": 8090,
+      "username": "",
+      "password": "",
+      "use_https": false,
+      "proxies": null,
+      "timeout": 30,
+      "verify_ssl": false
+    },
+    "falcon": {
+      "api_key": "",
+      "host": "www.reverse.it",
+      "environment": 120,
+      "proxies": null,
+      "timeout": 30,
+      "verify_ssl": true
+    },
+    "fireeye": {
+      "host": "localhost",
+      "port": 443,
+      "username": "",
+      "password": "",
+      "environment": "winxp-sp3",
+      "legacy_api": false,
+      "proxies": null,
+      "timeout": 30,
+      "verify_ssl": true
+    },
+    "joe": {
+      "api_key": "",
+      "host": "jbxcloud.joesecurity.org",
+      "proxies": null,
+      "timeout": 30,
+      "verify_ssl": true
+    },
+    "vmray": {
+      "api_key": "",
+      "host": "cloud.vmray.com",
+      "proxies": null,
+      "timeout": 30,
+      "verify_ssl": true
+    },
+    "wildfire": {
+      "api_key": "",
+      "host": "wildfire.paloaltonetworks.com",
+      "proxies": null,
+      "timeout": 30,
+      "verify_ssl": true
+    }
+  }
+}

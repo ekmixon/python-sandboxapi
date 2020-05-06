@@ -1,16 +1,225 @@
-from __future__ import print_function
+"""This module hosts the VMRay Sandbox class."""
 
-import sys
-import time
+from pathlib import Path
+from typing import Union
 
-import sandboxapi
+import requests
 
-class VMRayAPI(sandboxapi.SandboxAPI):
+from sandboxapi.base import Sandbox, SandboxAPI, SandboxError
+
+
+class VMRaySandbox(Sandbox):
+    """Represents the VMRay Sandbox API.
+
+    :param api_key: The customer API key.
+    :param host: The IP address or hostname of the VMRay sandbox server.
+    """
+
+    __slots__ = ['api_key', '_headers']
+
+    def __init__(
+            self,
+            api_key: str = '',
+            host: str = 'cloud.vmray.com',
+            **kwargs,
+    ) -> None:
+        """Instantiate a new VMRaySandbox object."""
+        super().__init__(alias=Path(__file__).stem, **kwargs)
+        host = self._set_attribute(host, 'cloud.vmray.com', 'host')
+        host = self._format_host(host)
+        self.api_key = self._set_attribute(api_key, '', 'api_key')
+        self.base_url = 'https://{}/rest'.format(host)
+        self._headers = {
+            'Authorization': 'api_key {}'.format(self.api_key)
+        }
+
+    # def analyze(self, handle: IO[Any], filename: str) -> str:
+    #     """A wrapper method for the new submit_sample() method. This method will be deprecated in a future version.
+    #
+    #     .. deprecated:: 2.0.0
+    #
+    #     :param handle: A file-like object.
+    #     :param filename: The name of the file.
+    #     :return: The item ID of the submitted sample.
+    #     """
+    #     warnings.warn('The analyze() method is deprecated in favor of submit_sample().', DeprecationWarning)
+    #     handle.seek(0)
+    #     response = requests.post(
+    #         '{}/sample/submit'.format(self.base_url),
+    #         headers=self._headers,
+    #         files={'sample_file': (filename, handle)},
+    #         **self._request_opts,
+    #     )
+    #     if response.status_code != requests.codes.ok:
+    #         raise SandboxError('{}'.format(self.decode(response)["error_msg"]))
+    #
+    #     output = self.decode(response)
+    #     return output['data']['samples'][0]['sample_id']
+
+    def submit_sample(self, filepath: Union[str, Path]) -> str:
+        """Submit a new sample to the VMRay sandbox for analysis.
+
+        :param filepath: The path to the sample to submit.
+        :return: The sample ID for the submitted sample.
+        """
+        with self._get_file(filepath) as file:
+            response = requests.post(
+                '{}/sample/submit'.format(self.base_url),
+                headers=self._headers,
+                files={'sample_file': file},
+                **self._request_opts,
+            )
+
+        if response.status_code != requests.codes.ok:
+            raise SandboxError('{}'.format(self.decode(response)["error_msg"]))
+
+        output = self.decode(response)
+        return output['data']['samples'][0]['sample_id']
+
+    def check_item_status(self, item_id: Union[int, str]) -> bool:
+        """Check to see if a particular sample analysis is complete.
+
+        :param item_id: The sample ID.
+        :return: True if the report is ready, otherwise False.
+        """
+        response = requests.get(
+            '{}/submission/sample/{}'.format(self.base_url, item_id),
+            headers=self._headers,
+            **self._request_opts,
+        )
+
+        if response.status_code != requests.codes.ok:
+            raise SandboxError('{}'.format(self.decode(response)["error_msg"]))
+
+        output = self.decode(response)
+        return output['data'][0]['submission_finished']
+
+    @property
+    def available(self) -> bool:
+        """Designates if a sandbox is up and available.
+
+        :return: True if the sandbox is available, else False.
+        """
+        response = requests.get(
+            '{}/system_info'.format(self.base_url),
+            headers=self._headers,
+            **self._request_opts,
+        )
+
+        return True if response.status_code == requests.codes.ok else False
+
+    def report(self, item_id: Union[int, str]) -> dict:
+        """Pulls the threat report from VMRay for the submitted sample.
+
+        :param item_id: The sample ID of the analyzed sample.
+        :return: The report of the analyzed sample.
+
+        The VMRay report has several different analyses -- one for each environment.
+        They all might or might not have the same score.
+        """
+        # the highest score is probably the most interesting.
+        # vmray uses this internally with sample_highest_vti_score so this seems like a safe assumption.
+        response = requests.get(
+            '{}/analysis/sample/{}'.format(self.base_url, item_id),
+            headers=self._headers,
+            **self._request_opts,
+        )
+
+        if response.status_code != requests.codes.ok:
+            raise SandboxError('{}'.format(self.decode(response)["error_msg"]))
+
+        return self.decode(response)
+
+    def detailed_report(self, analysis_id: Union[int, str]) -> dict:
+        """Pulls the detailed analysis report from VMRay for a particular analysis.
+
+        :param analysis_id: The ID for a particular analysis.
+        :return: The report of the analysis.
+
+        .. note:: The analysis ID is NOT the same as the item ID.
+        """
+        response = requests.get(
+            '{}/analysis/{}/archive/logs/summary.json'.format(self.base_url, analysis_id),
+            headers=self._headers,
+            **self._request_opts,
+        )
+
+        if response.status_code != requests.codes.ok:
+            raise SandboxError('{}'.format(self.decode(response)["error_msg"]))
+
+        return self.decode(response)
+
+    @staticmethod
+    def top_ranked_analysis(report: dict) -> int:
+        """Loops over each analysis in the report and finds the one with the highest vti score.
+
+        :param report: The report returned from VMRay for the submitted sample.
+        :return: The analysis ID of the highest ranked analysis.
+
+        This method is used to obtain an analysis ID for the detailed_report() method.
+
+        .. note:: In the event of a tie, the first analysis is given.
+        """
+        top_score = -1
+        analysis_id = -1
+        for analysis in report.get('data', {}):
+            if analysis.get('analysis_vti_score', -1) > top_score:
+                top_score = analysis['analysis_vti_score']
+                analysis_id = analysis['analysis_id']
+        if analysis_id < 0:
+            raise IndexError('No analysis found in report.')
+        return analysis_id
+
+    def score(self, report: dict) -> int:
+        """Get the threat score for the submitted sample.
+
+        :param report: The report returned from VMRay for the submitted sample.
+        :return: The threat score.
+        """
+        top_score = -1
+        if 'data' in report.keys():
+            # This is a regular report.
+            for analysis in report['data']:
+                if analysis['analysis_vti_score'] > top_score:
+                    top_score = int(analysis['analysis_vti_score'])
+        elif 'vti' in report.keys():
+            # This is a detailed report.
+            top_score = int(report['vti']['vti_score'])
+        return top_score // 10
+
+
+# class VMRayAPI(VMRaySandbox):
+#     """Legacy VMRay Sandbox class used for backwards compatibility.
+#
+#     .. deprecated:: 2.0.0
+#
+#     :param api_key: The API key to access the VMRay sandbox.
+#     :param url: The VMRay API URL.
+#     :param verify_ssl: Verify SSL Certificates if True, otherwise ignore self-signed certificates.
+#     """
+#
+#     def __init__(self, api_key: str, url: Optional[str] = None, verify_ssl: bool = True, **kwargs) -> None:
+#         """Initialize the interface to VMRay Sandbox API."""
+#         warnings.warn('The VMRayAPI class is deprecated in favor of VMRaySandbox.', DeprecationWarning)
+#         api = ''
+#         url = url or 'https://cloud.vmray.com'
+#         if '://' in url:
+#             _, host = url.split('//', maxsplit=1)
+#         else:
+#             host = url
+#         if '/' in host:
+#             host, api = host.split('/', maxsplit=1)
+#         super().__init__(api_key=api_key, host=host, verify_ssl=verify_ssl, **kwargs)
+#         if api:
+#             self.base_url = 'https://{}/{}'.format(host, api)
+
+
+class VMRayAPI(SandboxAPI):
     """VMRay Sandbox API wrapper."""
 
     def __init__(self, api_key, url=None, verify_ssl=True, **kwargs):
         """Initialize the interface to VMRay Sandbox API."""
-        sandboxapi.SandboxAPI.__init__(self, **kwargs)
+        SandboxAPI.__init__(self, **kwargs)
 
         self.base_url = url or 'https://cloud.vmray.com'
         self.api_url = self.base_url + '/rest'
@@ -44,9 +253,9 @@ class VMRayAPI(sandboxapi.SandboxAPI):
                 # only support single-file submissions; just grab the first one.
                 return response.json()['data']['samples'][0]['sample_id']
             else:
-                raise sandboxapi.SandboxError("api error in analyze ({u}): {r}".format(u=response.url, r=response.content))
+                raise SandboxError("api error in analyze ({u}): {r}".format(u=response.url, r=response.content))
         except (ValueError, KeyError, IndexError) as e:
-            raise sandboxapi.SandboxError("error in analyze: {e}".format(e=e))
+            raise SandboxError("error in analyze: {e}".format(e=e))
 
     def check(self, item_id):
         """Check if an analysis is complete.
@@ -71,7 +280,7 @@ class VMRayAPI(sandboxapi.SandboxAPI):
                 return True
 
         except (ValueError, KeyError) as e:
-            raise sandboxapi.SandboxError(e)
+            raise SandboxError(e)
 
         return False
 
@@ -98,7 +307,7 @@ class VMRayAPI(sandboxapi.SandboxAPI):
                     self.server_available = True
                     return True
 
-            except sandboxapi.SandboxError:
+            except SandboxError:
                 pass
 
         self.server_available = False
@@ -123,7 +332,7 @@ class VMRayAPI(sandboxapi.SandboxAPI):
 
         # grab an analysis id from the submission id.
         response = self._request("/analysis/sample/{sample_id}".format(sample_id=item_id),
-                headers=self.headers)
+                                 headers=self.headers)
 
         try:
             # the highest score is probably the most interesting.
@@ -136,11 +345,11 @@ class VMRayAPI(sandboxapi.SandboxAPI):
                     analysis_id = analysis['analysis_id']
 
         except (ValueError, KeyError) as e:
-            raise sandboxapi.SandboxError(e)
+            raise SandboxError(e)
 
         # assume report format json.
         response = self._request("/analysis/{analysis_id}/archive/logs/summary.json".format(analysis_id=analysis_id),
-                headers=self.headers)
+                   headers=self.headers)
 
         # if response is JSON, return it as an object.
         try:
@@ -157,69 +366,3 @@ class VMRayAPI(sandboxapi.SandboxAPI):
             return report['vti']['vti_score']
         except KeyError:
             return 0
-
-
-def vmray_loop(vmray, filename):
-    # test run
-    with open(arg, "rb") as handle:
-        fileid = vmray.analyze(handle, filename)
-        print("file {f} submitted for analysis, id {i}".format(f=filename, i=fileid))
-
-    while not vmray.check(fileid):
-        print("not done yet, sleeping 10 seconds...")
-        time.sleep(10)
-
-    print("analysis complete. fetching report...")
-    print(vmray.report(fileid))
-
-
-if __name__ == "__main__":
-
-    def usage():
-        msg = "%s: <url> <api_key> <submit <fh> | available | report <id> | analyze <fh>"
-        print(msg % sys.argv[0])
-        sys.exit(1)
-
-    if len(sys.argv) == 4:
-        cmd = sys.argv.pop().lower()
-        api_key = sys.argv.pop()
-        url = sys.argv.pop()
-        arg = None
-
-    elif len(sys.argv) == 5:
-        arg = sys.argv.pop()
-        cmd = sys.argv.pop().lower()
-        api_key = sys.argv.pop()
-        url = sys.argv.pop()
-
-    else:
-        usage()
-
-    # instantiate VMRay Sandbox API interface.
-    vmray = VMRayAPI(api_key)
-
-    # process command line arguments.
-    if "submit" in cmd:
-        if arg is None:
-            usage()
-        else:
-            with open(arg, "rb") as handle:
-                print(vmray.analyze(handle, arg))
-
-    elif "available" in cmd:
-        print(vmray.is_available())
-
-    elif "report" in cmd:
-        if arg is None:
-            usage()
-        else:
-            print(vmray.report(arg))
-
-    elif "analyze" in cmd:
-        if arg is None:
-            usage()
-        else:
-            vmray_loop(vmray, arg)
-
-    else:
-        usage()

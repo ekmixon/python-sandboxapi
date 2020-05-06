@@ -1,29 +1,28 @@
-import os
+"""sandboxapi setup.py."""
 from setuptools import setup
 
-README = open(os.path.join(os.path.dirname(__file__), 'README.rst')).read()
-
-# allow setup.py to be run from any path
-os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
-
-requirements = open(os.path.join(os.path.dirname(__file__),
-            'requirements.txt')).read()
-requires = requirements.strip().split('\n')
+with open('README.md', encoding='utf-8') as readme:
+    long_description = readme.read()
 
 setup(
     name='sandboxapi',
-    version='1.5.1',
-    include_package_data=True,
+    version='2.0.0.rc0',
     packages=[
         'sandboxapi',
     ],
-    install_requires=requires,
-    license='GPL',
-    description='Minimal, consistent API for building integrations with malware sandboxes.',
-    long_description=README,
-    url='https://github.com/InQuest/python-sandboxapi',
-    author='InQuest Labs',
-    author_email='labs@inquest.net',
+    url='',
+    license='GPLv2',
+    author='Chris Morrow for InQuest.net',
+    author_email='cmmorrow@inquest.net',
+    description='A Python API for building integrations with malware sandboxes.',
+    long_description=long_description,
+    install_requires=[
+        'click',
+        'jbxapi',
+        'requests',
+        'six',
+        'xmltodict',
+    ],
     classifiers=[
         'Intended Audience :: Developers',
         'Intended Audience :: Information Technology',
@@ -34,4 +33,10 @@ setup(
         'Topic :: Software Development :: Libraries',
         'Topic :: Internet',
     ],
+    python_requires='>=3.5',
+    entry_points={
+        'console_scripts': [
+            'sandboxapi = sandboxapi.cli:__main__',
+        ],
+    },
 )

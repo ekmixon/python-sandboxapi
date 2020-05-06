@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wildfire>
+    <version>2.0</version>
+    <file_info>
+        <malware>yes</malware>
+        <sha1>f7bdf39ddada9268518d087a56dee3256da54ead</sha1>
+        <filetype>PE</filetype>
+        <sha256>c58158f7bc2caef28a0bc5f10e0536daf841a32bf9ed05c52d7a0576346080e5</sha256>
+        <md5>4e8c629221da743086cd0af905d6f6d2</md5>
+        <size>55296</size>
+    </file_info>
+    <task_info>
+        <report>
+            <version>3.0</version>
+            <platform>60</platform>
+            <software>Windows XP, Adobe Reader 9.4.0, Flash 10, Office 2007</software>
+            <sha256>c58158f7bc2caef28a0bc5f10e0536daf841a32bf9ed05c52d7a0576346080e5</sha256>
+            <md5>4e8c629221da743086cd0af905d6f6d2</md5>
+            <size>55296</size>
+            <malware>yes</malware>
+            <summary>
+                <entry details="WildFire test samples exercise the capabilities of the WildFire analysis engine for purposes of testing."
+                       id="105" score="1.0">This is a WildFire test sample
+                </entry>
+                <entry details="Legitimate software creates or modifies files to preserve data across system restarts. Malware may create or modify files to deliver malicious payloads or maintain persistence on a system."
+                       id="3" score="0.1">Created or modified a file
+                </entry>
+                <entry details="The Windows Registry houses system configuration settings and options, including information about installed applications, services, and drivers. Malware often modifies registry data to establish persistence on the system and avoid detection."
+                       id="13" score="0.1">Modified the Windows Registry
+                </entry>
+            </summary>
+            <evidence>
+                <file/>
+                <registry/>
+                <process/>
+                <mutex/>
+            </evidence>
+            <timeline>
+                <entry seq="1">Created Process c:\documents and settings\administrator\sample.exe</entry>
+                <entry seq="2">Set key \REGISTRY\MACHINE\SOFTWARE\PaloAlto\PanCar to value 1</entry>
+            </timeline>
+            <network/>
+            <process_tree>
+                <process name="sample.exe" pid="1680" text="c:\documents and settings\administrator\sample.exe"/>
+            </process_tree>
+            <process_list>
+                <process command="c:\documents and settings\administrator\sample.exe" name="sample.exe" pid="1680">
+                    <process_activity/>
+                    <registry>
+                        <Create key="HKEY_LOCAL_MACHINE" subkey="Software\PaloAlto"/>
+                        <Set data="1" key="\REGISTRY\MACHINE\SOFTWARE\PaloAlto" subkey="PanCar"/>
+                    </registry>
+                    <file/>
+                    <service/>
+                    <mutex/>
+                    <java_api/>
+                </process>
+            </process_list>
+        </report>
+        <report>
+            <version>3.0</version>
+            <platform>61</platform>
+            <software>Windows 7 x64 SP1, Adobe Reader 11, Flash 11, Office 2010</software>
+            <sha256>c58158f7bc2caef28a0bc5f10e0536daf841a32bf9ed05c52d7a0576346080e5</sha256>
+            <md5>4e8c629221da743086cd0af905d6f6d2</md5>
+            <size>55296</size>
+            <malware>yes</malware>
+            <summary>
+                <entry details="WildFire test samples exercise the capabilities of the WildFire analysis engine for purposes of testing."
+                       id="105" score="1.0">This is a WildFire test sample
+                </entry>
+                <entry details="Legitimate software creates or modifies files to preserve data across system restarts. Malware may create or modify files to deliver malicious payloads or maintain persistence on a system."
+                       id="3" score="0.1">Created or modified a file
+                </entry>
+                <entry details="The Windows Registry houses system configuration settings and options, including information about installed applications, services, and drivers. Malware often modifies registry data to establish persistence on the system and avoid detection."
+                       id="13" score="0.1">Modified the Windows Registry
+                </entry>
+            </summary>
+            <evidence>
+                <file/>
+                <registry/>
+                <process/>
+                <mutex/>
+            </evidence>
+            <timeline>
+                <entry seq="1">Created Process C:\Users\Administrator\sample.exe</entry>
+                <entry seq="2">Set key \REGISTRY\MACHINE\SOFTWARE\Wow6432Node\PaloAlto\PanCar to value 1</entry>
+            </timeline>
+            <network/>
+            <process_tree>
+                <process name="sample.exe" pid="2120" text="C:\Users\Administrator\sample.exe"/>
+            </process_tree>
+            <process_list>
+                <process command="C:\Users\Administrator\sample.exe" name="sample.exe" pid="2120">
+                    <process_activity/>
+                    <registry>
+                        <Create key="HKEY_LOCAL_MACHINE" subkey="Software\PaloAlto"/>
+                        <Set data="1" key="\REGISTRY\MACHINE\SOFTWARE\Wow6432Node\PaloAlto" subkey="PanCar"/>
+                    </registry>
+                    <file/>
+                    <service/>
+                    <mutex/>
+                    <java_api/>
+                </process>
+            </process_list>
+        </report>
+        <report>
+            <version>3.0</version>
+            <platform>204</platform>
+            <software>PE Static Analyzer</software>
+            <sha256>c58158f7bc2caef28a0bc5f10e0536daf841a32bf9ed05c52d7a0576346080e5</sha256>
+            <md5>4e8c629221da743086cd0af905d6f6d2</md5>
+            <malware>no</malware>
+            <metadata>
+                <compilation_timestamp>2012-12-20 19:14:11</compilation_timestamp>
+                <sections>
+                    <section name=".text" raw_size="36864" virtual_addr="4096" virtual_size="36378"/>
+                    <section name=".rdata" raw_size="9728" virtual_addr="40960" virtual_size="9386"/>
+                    <section name=".data" raw_size="4096" virtual_addr="53248" virtual_size="11408"/>
+                    <section name=".reloc" raw_size="3584" virtual_addr="65536" virtual_size="3344"/>
+                </sections>
+            </metadata>
+            <summary>
+                <entry details="The PE file checksum is required for drivers, boot-time DLLs, and other DLLs loaded into secure system processes. Malware often ignores this value or sets it to zero."
+                       id="3015" score="0.0">Contains an invalid checksum
+                </entry>
+                <entry details="Standard sections are set to either writable or executable. PE files with sections set to both writable and executable are likely packed or obfuscated."
+                       id="3052" score="0.0">Contains sections set to both writable and executable
+                </entry>
+                <entry details="Sections with a large discrepancy between raw and virtual sizes may indicate a packed or obfuscated PE file."
+                       id="3013" score="0.0">Contains sections with size discrepancies
+                </entry>
+                <entry details="In standard PE files the execute flag is reserved for the first section. Use of the execute flag in the last section may indicate a packed or obfuscated file."
+                       id="3006" score="0.0">Last section is executable
+                </entry>
+                <entry details="In standard PE files the write flag is reserved for sections after the first. Use of the write flag in the first section may indicate a packed or obfuscated file."
+                       id="3007" score="0.0">First section is writable
+                </entry>
+            </summary>
+        </report>
+    </task_info>
+</wildfire>

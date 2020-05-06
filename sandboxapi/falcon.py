@@ -1,16 +1,283 @@
-from __future__ import print_function
+"""This module hosts the Falcon Sandbox class."""
 
-import sys
 import json
+from json import JSONDecodeError
+from pathlib import Path
+from typing import Union
 
-import sandboxapi
+import requests
 
-class FalconAPI(sandboxapi.SandboxAPI):
+from sandboxapi.base import Sandbox, SandboxAPI, SandboxError
+
+
+# Environments
+WIN7 = 100
+WIN7HWP = 110
+WIN7X64 = 120
+ANDROID = 200
+XENIAL = 300
+
+
+class FalconSandbox(Sandbox):
+    """Represents the Falcon Sandbox API.
+
+    :param api_key: The customer API key.
+    :param host: The IP address or hostname of the Falcon sandbox server.
+    :param environment: The sandbox runtime environment to use.
+    """
+
+    __slots__ = ['_api_key', 'environment', '_headers']
+
+    def __init__(
+            self,
+            api_key: str = '',
+            host: str = 'www.reverse.it',
+            environment: int = WIN7X64,
+            **kwargs,
+    ) -> None:
+        """Instantiate a new FalconSandbox object."""
+        super().__init__(alias=Path(__file__).stem, **kwargs)
+        host = self._set_attribute(host, 'www.reverse.it', 'host')
+        host = self._format_host(host)
+        environment = self._set_attribute(environment, WIN7X64, 'environment')
+        self._api_key = self._set_attribute(api_key, '', 'api_key')
+        self.base_url = 'https://{}/api/v2'.format(host)
+        self.environment = environment
+        self._headers = {
+            'api-key': self.api_key,
+            'User-Agent': 'Falcon Sandbox',
+            'Accept': 'application/json',
+        }
+
+    # def analyze(self, handle: IO[Any], filename: str) -> str:
+    #     """A wrapper method for the new submit_sample() method. This method will be deprecated in a future version.
+    #
+    #     .. deprecated:: 2.0.0
+    #
+    #     :param handle: A file-like object.
+    #     :param filename: The name of the file.
+    #     :return: The item ID of the submitted sample.
+    #     """
+    #     warnings.warn('The analyze() method is deprecated in favor of submit_sample().', DeprecationWarning)
+    #     handle.seek(0)
+    #     response = requests.post(
+    #         '{}/submit/file'.format(self.base_url),
+    #         data={'environment_id': str(self.environment)},
+    #         headers=self._headers,
+    #         files={'file': (filename, handle)},
+    #         **self._request_opts,
+    #     )
+    #
+    #     try:
+    #         output = self.decode(response)
+    #         if response.status_code == requests.codes.created:
+    #             return output['job_id']
+    #         else:
+    #             raise SandboxError('Error: {}'.format(output["message"]))
+    #     except JSONDecodeError:
+    #         raise SandboxError('{}: {}'.format(response.content, response.status_code))
+
+    def submit_sample(self, filepath: Union[str, Path]) -> str:
+        """Submit a new sample to the Falcon sandbox for analysis.
+
+        :param filepath: The path to the sample to submit.
+        :return: The job ID for the submitted sample.
+        """
+        with self._get_file(filepath) as file:
+            response = requests.post(
+                '{}/submit/file'.format(self.base_url),
+                data={'environment_id': str(self.environment)},
+                headers=self._headers,
+                files={'file': file},
+                **self._request_opts,
+            )
+
+        try:
+            output = self.decode(response)
+            if response.status_code == requests.codes.created:
+                return output['job_id']
+            else:
+                raise SandboxError('Error: {}'.format(output["message"]))
+        except JSONDecodeError:
+            raise SandboxError('{}: {}'.format(response.content, response.status_code))
+
+    def check_item_status(self, item_id: Union[int, str]) -> bool:
+        """Check to see if a particular sample analysis is complete.
+
+        :param item_id: The job ID.
+        :return: True if the report is ready, otherwise False.
+        """
+        response = requests.get(
+            '{}/report/{}/state'.format(self.base_url, item_id),
+            headers=self._headers,
+            params={'environment_id': str(self.environment)},
+            **self._request_opts,
+        )
+
+        if response.status_code == requests.codes.not_found:
+            raise SandboxError('Unknown job ID.')
+        elif response.status_code == requests.codes.too_many_requests:
+            raise SandboxError('API request limit exceeded.')
+
+        output = self.decode(response)
+        if response.status_code != requests.codes.ok:
+            raise SandboxError('Error: {}'.format(output["message"]))
+        status = output['state']
+        if status and status in {'SUCCESS', 'ERROR'}:
+            return True
+        else:
+            return False
+
+    @property
+    def api_key(self) -> str:
+        """Getter for the api_key.
+
+        :return: The object's API key.
+        """
+        return self._api_key
+
+    @property
+    def queue_size(self) -> int:
+        """Checks to see how many tasks are currently pending on the Falcon server.
+
+        :return: The number of pending jobs on the Falcon server.
+        """
+        response = requests.get(
+            '{}/system/queue-size'.format(self.base_url),
+            headers=self._headers,
+            params={'environment_id': str(self.environment)},
+            **self._request_opts,
+        )
+
+        output = self.decode(response)
+        if response.status_code == requests.codes.ok:
+            return int(output['value'])
+        else:
+            raise SandboxError('Error: {}'.format(output["message"]))
+
+    @property
+    def available(self) -> bool:
+        """Checks to see if the Falcon sandbox is up and running.
+
+        :return: True if the Falcon sandbox is responding, otherwise False.
+        """
+        response = requests.get(
+            '{}/system/heartbeat'.format(self.base_url),
+            **self._request_opts,
+        )
+        if response.status_code == requests.codes.forbidden:
+            response = requests.get(
+                '{}/system/version'.format(self.base_url),
+                **self._request_opts,
+            )
+            if response.status_code == requests.codes.ok:
+                return True
+            else:
+                return False
+        elif response.status_code == requests.codes.ok:
+            return True
+        else:
+            return False
+
+    def report(self, item_id: Union[int, str]) -> dict:
+        """Pulls the threat report from Falcon for the submitted sample.
+
+        :param item_id: The job ID for the submitted sample.
+        :return: The threat report.
+        """
+        response = requests.get(
+            '{}/report/{}/summary'.format(self.base_url, item_id),
+            headers=self._headers,
+            params={'environment_id': str(self.environment)},
+            **self._request_opts,
+        )
+        if response.status_code != requests.codes.ok:
+            raise SandboxError('{}: {}'.format(response.content, response.status_code))
+        return self.decode(response)
+
+    def pdf_report(self, item_id: Union[int, str]) -> bytes:
+        """Pulls the threat report from Falcon for the submitted sample as a PDF file.
+
+        :param item_id: The job ID for the submitted sample.
+        :return: The PDF version of the threat report.
+        """
+        headers = self._headers
+        headers['Accept'] = 'application/pdf'
+        response = requests.get(
+            '{}/report/{}/report/pdf'.format(self.base_url, item_id),
+            headers=headers,
+            params={'environment_id': str(self.environment)},
+            **self._request_opts,
+        )
+        if response.status_code != requests.codes.ok:
+            raise SandboxError('{}: {}'.format(response.content, response.status_code))
+        return response.content
+
+    def score(self, report: dict) -> int:
+        """Get the threat score for the submitted sample.
+
+        :param report: The report returned from Falcon for the submitted sample.
+        :return: The threat score.
+        """
+        threat_level = int(report['threat_level'])
+        threat_score = int(report['threat_score'])
+
+        if threat_level == 2 and threat_score >= 90:
+            score = 10
+        elif threat_level == 2 and threat_score >= 75:
+            score = 9
+        elif threat_level == 2:
+            score = 8
+        elif threat_level == 1 and threat_score >= 90:
+            score = 7
+        elif threat_level == 1 and threat_score >= 75:
+            score = 6
+        elif threat_level == 1:
+            score = 5
+        elif threat_level == 0 and threat_score >= 90:
+            score = 4
+        elif threat_level == 0 and threat_score >= 75:
+            score = 3
+        elif threat_level == 0 and threat_score < 75:
+            score = 1
+        else:
+            score = 0
+
+        return score
+
+
+# class FalconAPI(FalconSandbox):
+#     """Legacy Falcon Sandbox class used for backwards compatibility.
+#
+#     .. deprecated:: 2.0.0
+#
+#     :param key: The Falcon API key.
+#     :param url: The URL of the Falcon sandbox.
+#     :param env: The sandbox environment to use.
+#     """
+#
+#     def __init__(self, key: str, url: str = None, env: int = 100, **kwargs) -> None:
+#         """Initialize the interface to Falcon Sandbox API with key and secret."""
+#         warnings.warn('The FalconAPI class is deprecated in favor of FalconSandbox.', DeprecationWarning)
+#         api = ''
+#         url = url or 'www.reverse.it'
+#         if '://' in url:
+#             _, host = url.split('//', maxsplit=1)
+#         else:
+#             host = url
+#         if '/' in host:
+#             host, api = host.split('/', maxsplit=1)
+#         super().__init__(api_key=str(key), environment=int(env), host=host, **kwargs)
+#         if api:
+#             self.base_url = 'https://{}/{}'.format(host, api)
+
+
+class FalconAPI(SandboxAPI):
     """Falcon Sandbox API wrapper."""
 
     def __init__(self, key, url=None, env=100,  **kwargs):
         """Initialize the interface to Falcon Sandbox API with key and secret."""
-        sandboxapi.SandboxAPI.__init__(self, **kwargs)
+        SandboxAPI.__init__(self, **kwargs)
 
         self.api_url = url or 'https://www.reverse.it/api/v2'
         self.key = key
@@ -40,7 +307,7 @@ class FalconAPI(sandboxapi.SandboxAPI):
                 'Accept': 'application/json',
             }
 
-        return sandboxapi.SandboxAPI._request(self, uri, method, params, files, headers)
+        return SandboxAPI._request(self, uri, method, params, files, headers)
 
     def analyze(self, handle, filename):
         """Submit a file for analysis.
@@ -66,9 +333,9 @@ class FalconAPI(sandboxapi.SandboxAPI):
                 # good response
                 return response.json()['job_id']
             else:
-                raise sandboxapi.SandboxError("api error in analyze: {r}".format(r=response.content.decode('utf-8')))
+                raise SandboxError("api error in analyze: {r}".format(r=response.content.decode('utf-8')))
         except (ValueError, KeyError) as e:
-            raise sandboxapi.SandboxError("error in analyze: {e}".format(e=e))
+            raise SandboxError("error in analyze: {e}".format(e=e))
 
     def check(self, item_id):
         """Check if an analysis is complete.
@@ -93,7 +360,7 @@ class FalconAPI(sandboxapi.SandboxAPI):
                 return True
 
         except (ValueError, KeyError) as e:
-            raise sandboxapi.SandboxError(e)
+            raise SandboxError(e)
 
         return False
 
@@ -128,7 +395,7 @@ class FalconAPI(sandboxapi.SandboxAPI):
                         self.server_available = True
                         return True
 
-            except sandboxapi.SandboxError:
+            except SandboxError:
                 pass
 
         self.server_available = False
@@ -163,7 +430,7 @@ class FalconAPI(sandboxapi.SandboxAPI):
         response = self._request("/report/{job_id}/summary".format(job_id=item_id))
 
         if response.status_code == 429:
-            raise sandboxapi.SandboxError('API rate limit exceeded while fetching report')
+            raise SandboxError('API rate limit exceeded while fetching report')
 
         # if response is JSON, return it as an object
         if report_format == "json":
@@ -182,7 +449,7 @@ class FalconAPI(sandboxapi.SandboxAPI):
         response = self._request("/report/{job_id}/file/{report_format}".format(job_id=item_id, report_format=report_format))
 
         if response.status_code == 429:
-            raise sandboxapi.SandboxError('API rate limit exceeded while fetching report')
+            raise SandboxError('API rate limit exceeded while fetching report')
 
         # if response is JSON, return it as an object
         if report_format == "json":
@@ -201,7 +468,7 @@ class FalconAPI(sandboxapi.SandboxAPI):
             threatlevel = int(report['threat_level'])
             threatscore = int(report['threat_score'])
         except (KeyError, IndexError, ValueError, TypeError) as e:
-            raise sandboxapi.SandboxError(e)
+            raise SandboxError(e)
 
         # from falcon docs:
         # threatlevel is the verdict field with values: 0 = no threat, 1 = suspicious, 2 = malicious
@@ -226,52 +493,3 @@ class FalconAPI(sandboxapi.SandboxAPI):
             score = 1
 
         return score
-
-
-if __name__ == "__main__":
-
-    def usage():
-        msg = "%s: <key> <secret> <analyze <fh> | available | queue | report <id>>"
-        print(msg % sys.argv[0])
-        sys.exit(1)
-
-    if len(sys.argv) == 4:
-        cmd = sys.argv.pop().lower()
-        secret = sys.argv.pop().lower()
-        key = sys.argv.pop().lower()
-        arg = None
-
-    elif len(sys.argv) == 5:
-        arg = sys.argv.pop()
-        cmd = sys.argv.pop().lower()
-        secret = sys.argv.pop().lower()
-        key = sys.argv.pop().lower()
-
-    else:
-        usage()
-
-    # instantiate Falcon Sandbox API interface.
-    falcon = FalconAPI(key, secret)
-
-    # process command line arguments.
-    if "analyze" in cmd:
-        if arg is None:
-            usage()
-        else:
-            with open(arg, "rb") as handle:
-                print(falcon.analyze(handle, arg))
-
-    elif "available" in cmd:
-        print(falcon.is_available())
-
-    elif "queue" in cmd:
-        print(falcon.queue_size())
-
-    elif "report" in cmd:
-        if arg is None:
-            usage()
-        else:
-            print(falcon.report(arg))
-
-    else:
-        usage()

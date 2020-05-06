@@ -1,8 +1,11 @@
 *.py[cdo]
 .coverage
-*.xml
 *.egg-info/
 build/
 dist/
 _build/
 /build_dist.sh
+*/.coveragerc
+*/.mypy_cache
+*/.pytest_cache
+build_dist.sh
