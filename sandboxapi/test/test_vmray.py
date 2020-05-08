@@ -157,59 +157,6 @@ def test_arg_set():
     assert not hasattr(sandbox, 'nada')
 
 
-# def test_analyze_ok(mocker, ref_file_path, ref_submit_response, sandbox):
-#     """Verify the analyze() method works correctly."""
-#     dummy_file = ref_file_path / 'files' / 'dummy.txt'
-#     mocker.patch(
-#         'requests.post',
-#         return_value=MagicMock(
-#             content=bytes(json.dumps(ref_submit_response), encoding='utf-8'),
-#             status_code=200,
-#         ),
-#     )
-#     with dummy_file.open('rb') as file:
-#         submission_id = sandbox.analyze(file, 'dummy.txt')
-#     assert submission_id == 22
-
-
-# def test_analyze_error(mocker, ref_file_path, sandbox):
-#     """Verify the case where an error response is received."""
-#     dummy_file = ref_file_path / 'files' / 'dummy.txt'
-#     ref_response = {
-#         'error_msg': 'Missing parameter',
-#     }
-#     mocker.patch('pathlib.Path.open')
-#     mocker.patch(
-#         'requests.post',
-#         return_value=MagicMock(
-#             content=bytes(json.dumps(ref_response), encoding='utf-8'),
-#             status_code=400,
-#         ),
-#     )
-#     with pytest.raises(SandboxError):
-#         with dummy_file.open('rb') as file:
-#             sandbox.analyze(file, 'dummy.txt')
-
-
-# def test_analyze_bad_format(mocker, ref_file_path, sandbox):
-#     """Verify the case where the response is structured differently."""
-#     dummy_file = ref_file_path / 'files' / 'dummy.txt'
-#     ref_response = {
-#         'Boo': "I'm a ghost!"
-#     }
-#     mocker.patch('pathlib.Path.open')
-#     mocker.patch(
-#         'requests.post',
-#         return_value=MagicMock(
-#             content=bytes(json.dumps(ref_response), encoding='utf-8'),
-#             status_code=200,
-#         ),
-#     )
-#     with pytest.raises(KeyError):
-#         with dummy_file.open('rb') as file:
-#             sandbox.analyze(file, 'dummy.txt')
-
-
 def test_submit_sample_ok(mocker, ref_submit_response, sandbox):
     """Verify the submit_sample() method works correctly."""
     mocker.patch('pathlib.Path.open')
@@ -310,7 +257,6 @@ def test_available_ok(mocker, sandbox):
             status_code=200,
         ),
     )
-    # assert sandbox.is_available()
     assert sandbox.available
 
 
@@ -322,7 +268,6 @@ def test_available_fails(mocker, sandbox):
             status_code=404,
         ),
     )
-    # assert not sandbox.is_available()
     assert not sandbox.available
 
 
@@ -408,25 +353,14 @@ def test_config(sandbox):
     """Verify that config is set by passing in the correct argument."""
     assert hasattr(sandbox, 'config')
     assert not sandbox.config
-    assert not sandbox.verify_ssl
+    assert sandbox.verify_ssl
     assert not sandbox.proxies
     box = VMRaySandbox(
-        config=Path(__file__).parent / 'files' / 'ref_config.json',
+        config=Path(__file__).parent / 'files' / 'ref_config.cfg',
     )
     assert hasattr(box, 'config')
-    assert box.config.proxies == {"https": "http://10.10.1.10:1080"}
+    assert box.config.proxies == "http://10.10.1.10:1080"
     assert box.config.api_key == '12345678'
-    assert box.config.verify_ssl
-    assert box.verify_ssl
+    assert box.config.verify_ssl is False
+    assert box.verify_ssl is False
     assert box.base_url == 'https://cloud.vmray.com/rest'
-
-
-# def test_vmray_legacy_class():
-#     """Verify the legacy class constructor is backwards compatible."""
-#     sandbox = vmray.VMRayAPI(APIKEY, 'http://localhost/rest/v2', False)
-#     assert not sandbox.verify_ssl
-#     assert sandbox.base_url == 'https://localhost/rest/v2'
-#     sandbox = vmray.VMRayAPI(APIKEY, 'localhost')
-#     assert sandbox.base_url == 'https://localhost/rest'
-#     sandbox = vmray.VMRayAPI(APIKEY)
-#     assert sandbox.base_url == 'https://cloud.vmray.com/rest'

@@ -90,42 +90,6 @@ def test_arg_set():
     assert not hasattr(sandbox, 'nada')
 
 
-# def test_analyze_ok(mocker, ref_file_path, ref_submit_sample_ok, sandbox):
-#     """Verify the analyze() logic and parsing works correctly."""
-#     mocker.patch(
-#         'requests.post',
-#         return_value=MagicMock(content=bytes(ref_submit_sample_ok, encoding='utf-8'), status_code=200),
-#     )
-#     dummy_file = ref_file_path / 'files' / 'dummy.txt'
-#     with dummy_file.open('rb') as file:
-#         res_hash = sandbox.analyze(file, 'dummy.txt')
-#     assert res_hash == 'c58158f7bc2caef28a0bc5f10e0536daf841a32bf9ed05c52d7a0576346080e5'
-
-
-# def test_analyze_not_found(mocker, ref_file_path, sandbox):
-#     """Verify that a SandboxError is raised when a 404 is returned."""
-#     mocker.patch(
-#         'requests.post',
-#         return_value=MagicMock(content=bytes('Not Found', encoding='utf-8'), status_code=404),
-#     )
-#     dummy_file = ref_file_path / 'files' / 'dummy.txt'
-#     with pytest.raises(SandboxError):
-#         with dummy_file.open('rb') as file:
-#             sandbox.analyze(file, 'dummy.txt')
-
-
-# def test_analyze_no_sha256(mocker, ref_file_path, ref_submit_sample_no_sha256, sandbox):
-#     """Verify that a SandboxError is raised when a malformed XML is returned."""
-#     mocker.patch(
-#         'requests.post',
-#         return_value=MagicMock(content=bytes(ref_submit_sample_no_sha256, encoding='utf-8'), status_code=200),
-#     )
-#     dummy_file = ref_file_path / 'files' / 'dummy.txt'
-#     with pytest.raises(KeyError):
-#         with dummy_file.open('rb') as file:
-#             sandbox.analyze(file, 'dummy.txt')
-
-
 def test_submit_sample_ok(mocker, ref_submit_sample_ok, sandbox):
     """Verify the submit_sample() logic and parsing works correctly."""
     mocker.patch('pathlib.Path.open')
@@ -240,7 +204,6 @@ def test_available_ok(mocker, sandbox):
             status_code=405,
         ),
     )
-    # assert sandbox.is_available()
     assert sandbox.available
 
 
@@ -252,14 +215,12 @@ def test_available_unavailable(mocker, sandbox):
             status_code=500,
         ),
     )
-    # assert not sandbox.is_available()
     assert not sandbox.available
 
 
 def test_available_timeout(mocker, sandbox):
     """Verify the case where available returns False because of a timeout."""
     mocker.patch('requests.get', side_effect=Timeout)
-    # assert not sandbox.is_available()
     assert not sandbox.available
 
 
@@ -352,7 +313,7 @@ def test_config(ref_file_path, sandbox):
     assert not sandbox.config
     assert sandbox.timeout_secs == 30
     box = WildFireSandbox(
-        config=ref_file_path / 'files' / 'ref_config.json',
+        config=ref_file_path / 'files' / 'ref_config.cfg',
         timeout=10,
     )
     assert hasattr(box, 'config')
@@ -360,17 +321,3 @@ def test_config(ref_file_path, sandbox):
     assert not box.api_key
     assert box.timeout_secs == 10
     assert box.base_url == 'https://wildfire.paloaltonetworks.com/publicapi'
-
-
-# def test_wildfire_legacy_class():
-#     """Verify the legacy class constructor is backwards compatible."""
-#     sandbox = wildfire.WildFireAPI(APIKEY, 'http://localhost', verify_ssl=False)
-#     assert not sandbox.verify_ssl
-#     assert sandbox.api_key == APIKEY
-#     assert sandbox.base_url == 'https://localhost/publicapi'
-#     sandbox = wildfire.WildFireAPI(APIKEY, 'localhost', verify_ssl=False)
-#     assert sandbox.base_url == 'https://localhost/publicapi'
-#     sandbox = wildfire.WildFireAPI(APIKEY, 'https://localhost/api')
-#     assert sandbox.base_url == 'https://localhost/api'
-#     sandbox = wildfire.WildFireAPI(APIKEY)
-#     assert sandbox.base_url == 'https://wildfire.paloaltonetworks.com/publicapi'

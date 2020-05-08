@@ -3,7 +3,7 @@
 import json
 from json import JSONDecodeError
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 import requests
 
@@ -30,52 +30,23 @@ class FalconSandbox(Sandbox):
 
     def __init__(
             self,
-            api_key: str = '',
-            host: str = 'www.reverse.it',
-            environment: int = WIN7X64,
+            api_key: Optional[str] = None,
+            host: Optional[str] = None,
+            environment: Optional[int] = None,
             **kwargs,
     ) -> None:
         """Instantiate a new FalconSandbox object."""
         super().__init__(alias=Path(__file__).stem, **kwargs)
         host = self._set_attribute(host, 'www.reverse.it', 'host')
         host = self._format_host(host)
-        environment = self._set_attribute(environment, WIN7X64, 'environment')
+        self.environment = self._set_attribute(environment, WIN7X64, 'environment', int)
         self._api_key = self._set_attribute(api_key, '', 'api_key')
         self.base_url = 'https://{}/api/v2'.format(host)
-        self.environment = environment
         self._headers = {
             'api-key': self.api_key,
             'User-Agent': 'Falcon Sandbox',
             'Accept': 'application/json',
         }
-
-    # def analyze(self, handle: IO[Any], filename: str) -> str:
-    #     """A wrapper method for the new submit_sample() method. This method will be deprecated in a future version.
-    #
-    #     .. deprecated:: 2.0.0
-    #
-    #     :param handle: A file-like object.
-    #     :param filename: The name of the file.
-    #     :return: The item ID of the submitted sample.
-    #     """
-    #     warnings.warn('The analyze() method is deprecated in favor of submit_sample().', DeprecationWarning)
-    #     handle.seek(0)
-    #     response = requests.post(
-    #         '{}/submit/file'.format(self.base_url),
-    #         data={'environment_id': str(self.environment)},
-    #         headers=self._headers,
-    #         files={'file': (filename, handle)},
-    #         **self._request_opts,
-    #     )
-    #
-    #     try:
-    #         output = self.decode(response)
-    #         if response.status_code == requests.codes.created:
-    #             return output['job_id']
-    #         else:
-    #             raise SandboxError('Error: {}'.format(output["message"]))
-    #     except JSONDecodeError:
-    #         raise SandboxError('{}: {}'.format(response.content, response.status_code))
 
     def submit_sample(self, filepath: Union[str, Path]) -> str:
         """Submit a new sample to the Falcon sandbox for analysis.
@@ -246,32 +217,6 @@ class FalconSandbox(Sandbox):
         return score
 
 
-# class FalconAPI(FalconSandbox):
-#     """Legacy Falcon Sandbox class used for backwards compatibility.
-#
-#     .. deprecated:: 2.0.0
-#
-#     :param key: The Falcon API key.
-#     :param url: The URL of the Falcon sandbox.
-#     :param env: The sandbox environment to use.
-#     """
-#
-#     def __init__(self, key: str, url: str = None, env: int = 100, **kwargs) -> None:
-#         """Initialize the interface to Falcon Sandbox API with key and secret."""
-#         warnings.warn('The FalconAPI class is deprecated in favor of FalconSandbox.', DeprecationWarning)
-#         api = ''
-#         url = url or 'www.reverse.it'
-#         if '://' in url:
-#             _, host = url.split('//', maxsplit=1)
-#         else:
-#             host = url
-#         if '/' in host:
-#             host, api = host.split('/', maxsplit=1)
-#         super().__init__(api_key=str(key), environment=int(env), host=host, **kwargs)
-#         if api:
-#             self.base_url = 'https://{}/{}'.format(host, api)
-
-
 class FalconAPI(SandboxAPI):
     """Falcon Sandbox API wrapper."""
 
@@ -321,7 +266,7 @@ class FalconAPI(SandboxAPI):
         :return: File hash as a string
         """
         # multipart post files.
-        files = {"file" : (filename, handle)}
+        files = {"file": (filename, handle)}
 
         # ensure the handle is at offset 0.
         handle.seek(0)
@@ -446,7 +391,10 @@ class FalconAPI(SandboxAPI):
         """Retrieves a more detailed report"""
         report_format = report_format.lower()
 
-        response = self._request("/report/{job_id}/file/{report_format}".format(job_id=item_id, report_format=report_format))
+        response = self._request("/report/{job_id}/file/{report_format}".format(
+            job_id=item_id,
+            report_format=report_format,
+        ))
 
         if response.status_code == 429:
             raise SandboxError('API rate limit exceeded while fetching report')
@@ -461,7 +409,8 @@ class FalconAPI(SandboxAPI):
         # otherwise, return the raw content.
         return response.content.decode('utf-8')
 
-    def score(self, report):
+    @staticmethod
+    def score(report):
         """Pass in the report from self.report(), get back an int 0-10."""
 
         try:

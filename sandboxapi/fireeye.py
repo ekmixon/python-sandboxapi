@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 import requests
 from requests.auth import HTTPBasicAuth
@@ -27,16 +27,16 @@ class FireEyeSandbox(Sandbox):
     :param legacy_api: Use the older api if True, otherwise False.
     """
 
-    __slots__ = ['_api_token', '_auth', '_headers', 'profile']
+    __slots__ = ['_api_token', '_auth', '_headers', '_legacy_api', 'profile']
 
     def __init__(
             self,
-            username: str = '',
-            password: str = '',
-            host: str = 'localhost',
-            port: int = 443,
-            environment: str = WINXP,
-            legacy_api: bool = False,
+            username: Optional[str] = None,
+            password: Optional[str] = None,
+            host: Optional[str] = None,
+            port: Optional[int] = None,
+            environment: Optional[str] = None,
+            legacy_api: Optional[bool] = None,
             **kwargs,
     ) -> None:
         """Instantiate a new FireEyeSandbox object."""
@@ -45,13 +45,15 @@ class FireEyeSandbox(Sandbox):
         password = self._set_attribute(password, '', 'password')
         host = self._set_attribute(host, 'localhost', 'host')
         host = self._format_host(host)
-        port = self._set_attribute(port, 443, 'port')
+        port = self._set_attribute(port, 443, 'port', int)
         environment = self._set_attribute(environment, WINXP, 'environment')
-        legacy_api = self._set_attribute(legacy_api, False, 'legacy_api')
-        if legacy_api:
+        self._legacy_api = self._set_attribute(legacy_api, False, 'legacy_api', bool)
+
+        if self._legacy_api:
             base_url = 'https://{}:{}/wsapis/v1.1.0'.format(host, port)
         else:
             base_url = 'https://{}:{}/wsapis/v1.2.0'.format(host, port)
+
         self.base_url = base_url
         self._api_token = ''
         self._auth = HTTPBasicAuth(username, password)
@@ -77,46 +79,6 @@ class FireEyeSandbox(Sandbox):
 
         self._api_token = response.headers.get('X-FeApi-Token')
         self._headers['X-FeApi-Token'] = self._api_token
-
-    # def analyze(self, handle: IO[Any], filename: str) -> int:
-    #     """A wrapper method for the new submit_sample() method. This method will be deprecated in a future version.
-    #
-    #     .. deprecated:: 2.0.0
-    #
-    #     :param handle: A file-like object.
-    #     :param filename: The name of the file.
-    #     :return: The item ID of the submitted sample.
-    #     """
-    #     warnings.warn('The analyze() method is deprecated in favor of submit_sample().', DeprecationWarning)
-    #     handle.seek(0)
-    #     self._authenticate()
-    #     fireeye_options = {
-    #         'application': 0,
-    #         'timeout': 500,
-    #         'priority': 0,
-    #         'profiles': self.profile,
-    #         'analysistype': 0,
-    #         'force': True,
-    #         'prefetch': 1,
-    #     }
-    #     response = requests.post(
-    #         '{}/submissions'.format(self.base_url),
-    #         headers=self._headers,
-    #         data={'options': json.dumps(fireeye_options)},
-    #         files={'file': (filename, handle)},
-    #         **self._request_opts,
-    #     )
-    #     if response.status_code == requests.codes.bad_request:
-    #         raise SandboxError('{}'.format(response.content))
-    #     elif response.status_code != requests.codes.ok:
-    #         raise SandboxError('{}: {}'.format(response.status_code, response.content))
-    #
-    #     output = self.decode(response)
-    #     if isinstance(output, list):
-    #         item_id = int(output[0].get('ID', 0))
-    #     else:
-    #         item_id = int(output.get('ID', 0))
-    #     return item_id
 
     def submit_sample(self, filepath: Union[str, Path]) -> int:
         """Submit a new sample to the FireEye sandbox for analysis.
@@ -181,6 +143,11 @@ class FireEyeSandbox(Sandbox):
             return False
         else:
             raise SandboxError('Submission not found.')
+
+    @property
+    def legacy_api(self) -> bool:
+        """Getter for the protected _legacy_api attribute."""
+        return self._legacy_api
 
     @property
     def available(self) -> bool:
@@ -279,60 +246,6 @@ class FireEyeSandbox(Sandbox):
     def has_token(self) -> bool:
         """Check to see if the FireEyeSandbox object has an api token or not."""
         return True if self._api_token else False
-
-
-# class FireEyeAPI(FireEyeSandbox):
-#     """Legacy FireEye Sandbox class used for backwards compatibility.
-#
-#     .. deprecated:: 2.0.0
-#
-#     :param username: The sandbox user.
-#     :param password: The user's password.
-#     :param url: FireEye API URL.
-#     :param profile: The sandbox environment to use.
-#     :param legacy_api: Use the v1.1 API if True, otherwise use v1.2.
-#     :param verify_ssl: Verify SSL Certificates if True, otherwise ignore self-signed certificates.
-#     """
-#
-#     def __init__(
-#             self,
-#             username: str,
-#             password: str,
-#             url: str,
-#             profile: str,
-#             legacy_api: bool = False,
-#             verify_ssl: bool = True,
-#             **kwargs,
-#     ) -> None:
-#         """Initialize the interface to FireEye Sandbox API."""
-#         warnings.warn('The FireEyeAPI class is deprecated in favor of CuckooSandbox.', DeprecationWarning)
-#         api = ''
-#         profile = profile or 'winxp-sp3'
-#         port = 443
-#         if '://' in url:
-#             _, host = url.split('//', maxsplit=1)
-#         else:
-#             host = url
-#         if ':' in host:
-#             host, port = host.split(':', maxsplit=1)
-#             if '/' in port:
-#                 port, api = port.split('/', maxsplit=1)
-#         elif '/' in host:
-#             host, api = host.split('/', maxsplit=1)
-#         if 'v1.1.0' in api:
-#             legacy_api = True
-#         super().__init__(
-#             username=username,
-#             password=password,
-#             host=host,
-#             port=int(port),
-#             environment=profile,
-#             legacy_api=legacy_api,
-#             verify_ssl=verify_ssl,
-#             **kwargs,
-#         )
-#         if api:
-#             self.base_url = 'https://{}:{}/{}'.format(host, port, api)
 
 
 class FireEyeAPI(SandboxAPI):
@@ -524,7 +437,8 @@ class FireEyeAPI(SandboxAPI):
         # otherwise, return the raw content.
         return response.content
 
-    def score(self, report):
+    @staticmethod
+    def score(report):
         """Pass in the report from self.report(), get back an int."""
         score = 0
         if report['alert'][0]['severity'] == 'MAJR':

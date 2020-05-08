@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 import jbxapi
 from jbxapi import ApiError, ConnectionError
@@ -24,8 +24,8 @@ class JoeSandbox(Sandbox):
 
     def __init__(
             self,
-            api_key: str = '',
-            host: str = 'jbxcloud.joesecurity.org',
+            api_key: Optional[str] = None,
+            host: Optional[str] = None,
             **kwargs,
     ) -> None:
         """Instantiate a new JoeSandbox object."""
@@ -42,24 +42,6 @@ class JoeSandbox(Sandbox):
             verify_ssl=self.verify_ssl,
             user_agent='Inquest SandboxAPI',
         )
-
-    # def analyze(self, handle: IO[Any], filename: str) -> str:
-    #     """A wrapper method for the new submit_sample() method. This method will be deprecated in a future version.
-    #
-    #     .. deprecated:: 2.0.0
-    #
-    #     :param handle: A file-like object.
-    #     :param filename: The name of the file.
-    #     :return: The item ID of the submitted sample.
-    #     """
-    #     del filename
-    #     warnings.warn('The analyze() method is deprecated in favor of submit_sample().', DeprecationWarning)
-    #     handle.seek(0)
-    #     try:
-    #         response = self.jbx.submit_sample(handle)
-    #     except (ApiError, ConnectionError) as err:
-    #         raise SandboxError(err)
-    #     return response['submission_id']
 
     def submit_sample(self, filepath: Union[str, Path]) -> str:
         """Submit a new sample to the Joe sandbox for analysis.
@@ -166,52 +148,6 @@ class JoeSandbox(Sandbox):
         return int(score / max_score * 10)
 
 
-# class JoeAPI(JoeSandbox):
-#     """Legacy Joe Sandbox class used for backwards compatibility.
-#
-#     .. deprecated:: 2.0.0
-#
-#     :param apikey: The API key to access Joe sandbox.
-#     :param apiurl: The Joe API URL.
-#     :param accept_tac: True to accept the Terms and Conditions.
-#     :param timeout: The number of seconds to wait for a response.
-#     :param verify_ssl: Verify SSL Certificates if True, otherwise ignore self-signed certificates.
-#     :param retries: The number of times to retry after an error occurs.
-#     """
-#
-#     def __init__(
-#             self,
-#             apikey: str,
-#             apiurl: str,
-#             accept_tac: bool,
-#             timeout: Optional[int] = None,
-#             verify_ssl: bool = True,
-#             retries: int = 3,
-#             **kwargs,
-#     ) -> None:
-#         """Initialize the interface to Joe Sandbox API."""
-#         warnings.warn('The JoeAPI class is deprecated in favor of JoeSandbox.', DeprecationWarning)
-#         api = ''
-#         apiurl = apiurl or 'jbxcloud.joesecurity.org'
-#         if '://' in apiurl:
-#             _, host = apiurl.split('//', maxsplit=1)
-#         else:
-#             host = apiurl
-#         if '/' in host:
-#             host, api = host.split('/', maxsplit=1)
-#         super().__init__(api_key=apikey, host=host, verify_ssl=verify_ssl, **kwargs)
-#         if api:
-#             self.base_url = 'https://{}/{}'.format(host, api)
-#         self.jbx = jbxapi.JoeSandbox(
-#             apikey=apikey,
-#             apiurl=self.base_url,
-#             accept_tac=accept_tac,
-#             timeout=timeout,
-#             verify_ssl=self.verify_ssl,
-#             retries=retries,
-#         )
-
-
 class JoeAPI(SandboxAPI):
     """Joe Sandbox API wrapper.
 
@@ -256,8 +192,6 @@ class JoeAPI(SandboxAPI):
             return self.jbx.info(item_id).get('status').lower() == 'finished'
         except jbxapi.JoeException:
             return False
-
-        return False
 
     def is_available(self):
         """Determine if the Joe Sandbox API server is alive.
@@ -306,7 +240,8 @@ class JoeAPI(SandboxAPI):
         except (jbxapi.JoeException, ValueError, IndexError) as e:
             raise SandboxError("error in report fetch: {e}".format(e=e))
 
-    def score(self, report):
+    @staticmethod
+    def score(report):
         """Pass in the report from self.report(), get back an int."""
         try:
             return report['analysis']['signaturedetections']['strategy'][1]['score']

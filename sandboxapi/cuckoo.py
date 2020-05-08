@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from typing import Any, List, Union
+from typing import Any, List, Optional, Union
 
 import requests
 from requests.auth import HTTPBasicAuth
@@ -20,15 +20,15 @@ class CuckooSandbox(Sandbox):
     :param use_https: Use https if True, otherwise use http.
     """
 
-    __slots__ = ['_request_opts']
+    __slots__ = ['_request_opts', '_use_https']
 
     def __init__(
             self,
-            username: str = '',
-            password: str = '',
-            host: str = 'localhost',
-            port: int = 8090,
-            use_https: bool = False,
+            username: Optional[str] = None,
+            password: Optional[str] = None,
+            host: Optional[str] = None,
+            port: Optional[int] = None,
+            use_https: Optional[bool] = None,
             **kwargs,
     ) -> None:
         """Instantiate a new CuckooSandbox object."""
@@ -37,12 +37,13 @@ class CuckooSandbox(Sandbox):
         password = self._set_attribute(password, '', 'password')
         host = self._set_attribute(host, 'localhost', 'host')
         host = self._format_host(host)
-        port = self._set_attribute(port, 8090, 'port')
-        use_https = self._set_attribute(use_https, False, 'use_https')
-        if use_https:
+        port = self._set_attribute(port, 8090, 'port', int)
+        self._use_https = self._set_attribute(use_https, False, 'use_https', bool)
+        if self._use_https:
             scheme = 'https'
         else:
             scheme = 'http'
+            self.verify_ssl = False
         self.base_url = '{}://{}:{}'.format(scheme, host, port)
         if username and password:
             self._request_opts['auth'] = HTTPBasicAuth(username, password)
@@ -55,29 +56,6 @@ class CuckooSandbox(Sandbox):
         )
         output = self.decode(response)
         return output['tasks']
-
-    # def analyze(self, handle: IO[Any], filename: str) -> str:
-    #     """A wrapper method for the new submit_sample() method. This method will be deprecated in a future version.
-    #
-    #     .. deprecated:: 2.0.0
-    #
-    #     :param handle: A file-like object.
-    #     :param filename: The name of the file.
-    #     :return: The item ID of the submitted sample.
-    #     """
-    #     warnings.warn('The analyze() method is deprecated in favor of submit_sample().', DeprecationWarning)
-    #     handle.seek(0)
-    #     response = requests.post(
-    #         '{}/task/create/file'.format(self.base_url),
-    #         files={'file': (filename, handle)},
-    #         **self._request_opts,
-    #     )
-    #
-    #     if response.status_code != requests.codes.ok:
-    #         raise SandboxError('{}: {}'.format(response.content, response.status_code))
-    #
-    #     output = self.decode(response)
-    #     return output['task_id']
 
     def submit_sample(self, filepath: Union[str, Path]) -> str:
         """Submit a new sample to the Cuckoo sandbox for analysis.
@@ -142,6 +120,11 @@ class CuckooSandbox(Sandbox):
         return True
 
     @property
+    def use_https(self) -> bool:
+        """Getter for the protected use_https attribute."""
+        return self._use_https
+
+    @property
     def available(self) -> bool:
         """Checks to see if the Cuckoo sandbox is up and running.
 
@@ -190,34 +173,6 @@ class CuckooSandbox(Sandbox):
         if score is None:
             score = report['info']['score']
         return score
-
-
-# class CuckooAPI(CuckooSandbox):
-#     """Legacy Cuckoo Sandbox class used for backwards compatibility.
-#
-#     .. deprecated:: 2.0.0
-#
-#     :param url: Cuckoo API URL or host.
-#     :param port: The Cuckoo API port.
-#     :param api_path: The endpoint to reach the Cuckoo API.
-#     """
-#
-#     def __init__(self, url: str, port: int = 8090, api_path: str = '/', verify_ssl: bool = False, **kwargs) -> None:
-#         """Initialize the interface to Cuckoo Sandbox API with host and port."""
-#         warnings.warn('The CuckooAPI class is deprecated in favor of CuckooSandbox.', DeprecationWarning)
-#         if '://' in url:
-#             _, host = url.split('//', maxsplit=1)
-#         else:
-#             host = url
-#         if ':' in host:
-#             host, port = host.split(':', maxsplit=1)
-#         if '/' in host:
-#             host, api_path = host.split('/', maxsplit=1)
-#         super().__init__(host=host, port=int(port), verify_ssl=verify_ssl, **kwargs)
-#         if api_path != '/':
-#             if not api_path.startswith('/'):
-#                 api_path = '/{}'.format(api_path)
-#             self.base_url = 'http://{}:{}{}'.format(host, port, api_path)
 
 
 class CuckooAPI(SandboxAPI):
@@ -403,10 +358,9 @@ class CuckooAPI(SandboxAPI):
         # otherwise, return the raw content.
         return response.content
 
-    def score(self, report):
+    @staticmethod
+    def score(report):
         """Pass in the report from self.report(), get back an int."""
-        score = 0
-
         try:
             # cuckoo-modified format
             score = report['malscore']

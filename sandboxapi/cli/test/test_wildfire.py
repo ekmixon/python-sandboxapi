@@ -5,16 +5,8 @@ from pathlib import Path
 import pytest
 from unittest.mock import PropertyMock
 
-from click.testing import CliRunner
-
 from sandboxapi.cli.wildfire.commands import wildfire
 from sandboxapi import SandboxError
-
-
-@pytest.fixture
-def runner():
-    """Provides an object for running CLI commands."""
-    return CliRunner(echo_stdin=True)
 
 
 @pytest.fixture

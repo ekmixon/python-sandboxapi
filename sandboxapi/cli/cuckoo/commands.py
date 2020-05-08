@@ -55,7 +55,11 @@ def cuckoo(
         sandbox_args['timeout'] = timeout
     if ssl:
         sandbox_args['verify_ssl'] = ssl
-    ctx.obj = CuckooSandbox(**sandbox_args)
+    try:
+        ctx.obj = CuckooSandbox(**sandbox_args)
+    except SandboxError as err:
+        click.secho(str(err), err=True, fg='red')
+        ctx.exit(20)
 
 
 @cuckoo.command(short_help='Check to see if the Cuckoo sandbox is available.')

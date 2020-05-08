@@ -195,57 +195,6 @@ def test_authentication_not_available(mocker, sandbox):
     assert not sandbox.has_token
 
 
-# def test_analyze_ok(mocker, ref_file_path, sandbox):
-#     """Verify the analyze() method works correctly."""
-#     dummy_file = ref_file_path / 'files' / 'dummy.txt'
-#     mocker.patch('sandboxapi.fireeye.FireEyeSandbox._authenticate')
-#     mocker.patch(
-#         'requests.post',
-#         side_effect=[
-#             MagicMock(content=bytes(json.dumps([{'ID': 222}]), encoding='utf-8'), status_code=200),
-#             MagicMock(content=bytes(json.dumps({'ID': 222}), encoding='utf-8'), status_code=200),
-#         ]
-#     )
-#     with dummy_file.open('rb') as file:
-#         eval_id = sandbox.analyze(file, 'dummy.txt')
-#     assert eval_id == 222
-#     with dummy_file.open('rb') as file:
-#         eval_id = sandbox.analyze(file, 'dummy.txt')
-#     assert eval_id == 222
-
-
-# def test_analyze_bad(mocker, ref_file_path, sandbox):
-#     """Verify the case where analyze() raises an error because of a bad request."""
-#     dummy_file = ref_file_path / 'files' / 'dummy.txt'
-#     mocker.patch('sandboxapi.fireeye.FireEyeSandbox._authenticate')
-#     mocker.patch(
-#         'requests.post',
-#         return_value=MagicMock(
-#             content='Request unsuccessful because the filter value was invalid.',
-#             status_code=400,
-#         ),
-#     )
-#     with pytest.raises(SandboxError):
-#         with dummy_file.open('rb') as file:
-#             sandbox.analyze(file, 'dummy.txt')
-
-
-# def test_analyze_unknown(mocker, ref_file_path, sandbox):
-#     """Verify the case where analyze() raises an error because of an unknown status code."""
-#     dummy_file = ref_file_path / 'files' / 'dummy.txt'
-#     mocker.patch('sandboxapi.fireeye.FireEyeSandbox._authenticate')
-#     mocker.patch(
-#         'requests.post',
-#         return_value=MagicMock(
-#             content='Request unsuccessful because the filter value was invalid.',
-#             status_code=500,
-#         ),
-#     )
-#     with pytest.raises(SandboxError):
-#         with dummy_file.open('rb') as file:
-#             sandbox.analyze(file, 'dummy.txt')
-
-
 def test_submit_sample_ok(mocker, sandbox):
     """Verify the submit_sample() method works correctly."""
     mocker.patch('pathlib.Path.open')
@@ -366,7 +315,6 @@ def test_available_ok(mocker, mock_auth, sandbox):
         ),
     )
     assert sandbox.available
-    # assert sandbox.is_available()
 
 
 def test_available_unavailable(mocker, mock_auth, sandbox):
@@ -378,7 +326,6 @@ def test_available_unavailable(mocker, mock_auth, sandbox):
         ),
     )
     assert not sandbox.available
-    # assert not sandbox.is_available()
 
 
 def test_available_unauthorized(mocker, mock_auth, sandbox):
@@ -527,35 +474,24 @@ def test_config(sandbox):
     assert not sandbox.config
     assert sandbox.timeout_secs == 30
     box = FireEyeSandbox(
-        config=Path(__file__).parent / 'files' / 'ref_config.json',
+        config=Path(__file__).parent / 'files' / 'ref_config.cfg',
         environment='win7x64-sp1',
     )
     assert hasattr(box, 'config')
     assert box.config.username == 'maurice_moss'
     assert box.config.password == 'tnetennba'
     assert box.config.host == 'friendface.com'
-    assert box.config.timeout == 10
+    assert box.config.timeout == '10'
     assert box.profile == 'win7x64-sp1'
     assert box.timeout_secs == 10
+    assert isinstance(box.legacy_api, bool)
+    assert box.legacy_api
+    assert box.base_url == 'https://friendface.com:443/wsapis/v1.1.0'
     # Make sure that explicitly defined args in the constructor are used instead of what's in the config file.
-    assert box.base_url == 'https://friendface.com:443/wsapis/v1.2.0'
     box = FireEyeSandbox(
-        config=Path(__file__).parent / 'files' / 'ref_config.json',
+        config=Path(__file__).parent / 'files' / 'ref_config.cfg',
         environment='win7x64-sp1',
         host='bluffball',
+        legacy_api=False,
     )
     assert box.base_url == 'https://bluffball:443/wsapis/v1.2.0'
-
-
-# def test_fireeye_legacy_class():
-#     """Verify the legacy class constructor is backwards compatible."""
-#     sandbox = fireeye.FireEyeAPI(USERNAME, PASSWORD, 'https://10.1.10.9:8888', 'win7x64-sp1', True, False)
-#     assert sandbox.base_url == 'https://10.1.10.9:8888/wsapis/v1.1.0'
-#     assert sandbox.profile == 'win7x64-sp1'
-#     assert not sandbox.verify_ssl
-#     sandbox = fireeye.FireEyeAPI(USERNAME, PASSWORD, '10.1.10.9', 'win7x64-sp1')
-#     assert sandbox.base_url == 'https://10.1.10.9:443/wsapis/v1.2.0'
-#     sandbox = fireeye.FireEyeAPI(USERNAME, PASSWORD, 'https://localhost:443/wsapis/v1.1.0', 'winxp-sp3')
-#     assert sandbox.base_url == 'https://localhost:443/wsapis/v1.1.0'
-#     sandbox = fireeye.FireEyeAPI(USERNAME, PASSWORD, 'https://localhost/wsapis/v1.1.0', 'winxp-sp3')
-#     assert sandbox.base_url == 'https://localhost:443/wsapis/v1.1.0'

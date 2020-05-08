@@ -1,5 +1,6 @@
 """This module hosts the Sandbox super class."""
 
+import configparser
 import json
 import re
 from pathlib import Path
@@ -51,7 +52,7 @@ class Sandbox:
     **verify_ssl**
 
     - Default is True.
-    - Set to False to ignore SSL certificate validation.
+    - Set to False to ignore SSL certificate verification.
     - Can also be a path to a trusted certfile or directory of certificates.
     """
 
@@ -63,31 +64,20 @@ class Sandbox:
             base_url: str = '',
             config: Union[Path, str] = '',
             proxies: Optional[dict] = None,
-            timeout: int = 30,
-            verify_ssl: Union[bool, str] = False,
+            timeout: Optional[int] = None,
+            verify_ssl: Optional[bool] = None,
             **kwargs,
     ) -> None:
         """Instantiates a new Sandbox object."""
         self.base_url = base_url
         self.config = Config(config, alias) if config else None
         self.proxies = self._set_attribute(proxies, None, 'proxies')
-        self.timeout_secs = self._set_attribute(timeout, 30, 'timeout')
-        self.verify_ssl = self._set_attribute(verify_ssl, False, 'verify_ssl')
+        self.timeout_secs = self._set_attribute(timeout, 30, 'timeout', float)
+        self.verify_ssl = self._set_attribute(verify_ssl, True, 'verify_ssl', bool)
         self._request_opts = dict(
             timeout=self.timeout_secs,
             verify=self.verify_ssl,
         )
-
-    # def analyze(self, handle: IO[Any], filename: str) -> str:
-    #     """A wrapper method for the new submit_sample() method. This method will be deprecated in a future version.
-    #
-    #     .. deprecated:: 2.0.0
-    #
-    #     :param handle: A file-like object.
-    #     :param filename: The name of the file.
-    #     :return: The item ID of the submitted sample.
-    #     """
-    #     raise NotImplementedError
 
     def submit_sample(self, filepath: Union[str, Path]) -> str:
         """Submit a new sample to the sandbox for analysis.
@@ -96,17 +86,6 @@ class Sandbox:
         :return: The ID of the created item.
         """
         raise NotImplementedError
-
-    # def check(self, item_id: Union[int, str]) -> bool:
-    #     """A wrapper method for the new check_item_status() method. This method will be deprecated in a future version.
-    #
-    #     .. deprecated:: 2.0.0
-    #
-    #     :param item_id: The item ID of the sample to check.
-    #     :return: True if the analysis for the sample is complete, otherwise False.
-    #     """
-    #     warnings.warn('The check() method is deprecated in favor of check_item_status()', DeprecationWarning)
-    #     return self.check_item_status(item_id)
 
     def check_item_status(self, item_id: Union[int, str]) -> bool:
         """Check to see if the analysis for a particular sample is complete.
@@ -159,19 +138,6 @@ class Sandbox:
         """
         raise NotImplementedError
 
-    # def is_available(self) -> bool:
-    #     """This method is a wrapper for the newer is_available property and will be deprecated.
-    #
-    #     .. deprecated:: 2.0.0
-    #
-    #     :return: True if the item was successfully removed.
-    #     """
-    #     warnings.warn(
-    #         'The is_available() method is deprecated in favor of the available property.',
-    #         DeprecationWarning,
-    #     )
-    #     return self.available
-
     def delete_item(self, item_id: Union[str, int]) -> bool:
         """Remove an item from the sandbox.
 
@@ -208,7 +174,7 @@ class Sandbox:
         return filepath.open(mode='rb')
 
     @staticmethod
-    def _generate_config_file(filepath: Union[str, Path] = '.') -> None:
+    def generate_config_file(filepath: Union[str, Path] = '.') -> None:
         """Creates a config file template at the specified path.
 
         :param filepath: The path to the config file.
@@ -216,9 +182,9 @@ class Sandbox:
 
         The default name for the config file is *sandbox_config.json*.
         """
-        template = (Path(__file__).parent / 'static' / 'config_template.json').read_text()
+        template = (Path(__file__).parent / 'static' / 'template.cfg').read_text()
         if str(filepath) == '.':
-            filepath = filepath / 'sandbox_config.json'
+            filepath = Path('.') / 'sandbox_config.cfg'
         Path(filepath).write_text(template)
 
     @staticmethod
@@ -233,7 +199,7 @@ class Sandbox:
             host = match.group(1)
         return host
 
-    def _set_attribute(self, value: Any, default: Any, name: str) -> Any:
+    def _set_attribute(self, value: Any, default: Any, name: str, data_type: type = str) -> Any:
         """Sets initialized arguments values based on priority.
 
         Attribute setting priority: explicit arg > config property > arg default
@@ -241,14 +207,18 @@ class Sandbox:
         :param value: The argument value to set.
         :param default: The default value of the argument in __init__.
         :param name: The name of the setting in the config file.
+        :param data_type: The data type for interpreting the attribute.
         :return: If no config, returns value if different from default, otherwise the setting in config.
         """
-        if not self.config:
+        if value is not None:
             return value
-        if value != default:
-            return value
+        if self.config and hasattr(self.config, name):
+            out = vars(self.config).get(name)
+            if out is not None:
+                out = data_type(out)
+            return out
         else:
-            return vars(self.config).get(name) or default
+            return default
 
 
 class Config:
@@ -257,38 +227,35 @@ class Config:
     :param path: The path to the config file.
     :param sandbox_name: The name of the sandbox with configuration properties to load.
 
-    - Config files are stored in json.
-    - The json must have a name "sandboxes" with an object for each sandbox.
-    - The name for each sandbox must be lowercase with no spaces.
+    - Config files are stored in ini format.
     - The object for each sandbox contains name/value pairs for each configuration.
     - The configuration name must match the Sandbox object attribute name.
 
     :Example:
 
-        {
-          "sandboxes": {
-            "cuckoo": {
-              "host": "localhost",
-              "port": 8888
-            },
-            "vmray": {
-              "api_key": "123456"
-            }
-          }
-        }
+        [cuckoo]
+        host = localhost
+        port = 8888
+
+        [vmray]
+        api_key = 123456
 
     """
 
     def __init__(self, path: Union[Path, str], sandbox_name: str) -> None:
         """Instantiate a new Config object."""
         self.__path = Path(path)
-        config_ = json.loads(self.__path.expanduser().read_text())
-        # TODO: Add JSONSchema and validation for config files.
+        config = configparser.ConfigParser(allow_no_value=True)
         try:
-            if sandbox_name in config_['sandboxes']:
-                for key, value in config_['sandboxes'][sandbox_name].items():
+            config.read_file(open(self.__path.expanduser()))
+            if sandbox_name in config.sections():
+                for key, value in config.items(sandbox_name):
+                    if value.lower() in ('true', 'false', 'yes', 'no', 'on', 'off', '1', '0'):
+                        value = config.getboolean(sandbox_name, key)
                     setattr(self, key, value)
-        except (KeyError, AttributeError):
+        except FileNotFoundError as err:
+            raise SandboxError(err)
+        except (configparser.Error, KeyError, AttributeError):
             raise SandboxError('The config file cannot be read because it is not properly formatted.')
 
 
@@ -373,14 +340,6 @@ class SandboxAPI(object):
 
         raise SandboxError(msg)
 
-    def analyses(self):
-        """Retrieve a list of analyzed samples.
-
-        :rtype:  list
-        :return: List of objects referencing each analyzed file.
-        """
-        raise NotImplementedError
-
     def analyze(self, handle, filename):
         """Submit a file for analysis.
 
@@ -405,17 +364,6 @@ class SandboxAPI(object):
         """
         raise NotImplementedError
 
-    def delete(self, item_id):
-        """Delete the reports associated with the given item_id.
-
-        :type  item_id: int | str
-        :param item_id: Report ID to delete.
-
-        :rtype:  bool
-        :return: True on success, False otherwise.
-        """
-        raise NotImplementedError
-
     def is_available(self):
         """Determine if the Sandbox API servers are alive or in maintenance mode.
 
@@ -424,19 +372,12 @@ class SandboxAPI(object):
         """
         raise NotImplementedError
 
-    def queue_size(self):
-        """Determine sandbox queue length
-
-        :rtype:  int
-        :return: Number of submissions in sandbox queue.
-        """
-        raise NotImplementedError
-
     def report(self, item_id, report_format="json"):
         """Retrieves the specified report for the analyzed item, referenced by item_id.
 
         :type  item_id: int | str
         :param item_id: Item ID
+        :param report_format: str
 
         :rtype:  dict
         :return: Dictionary representing the JSON parsed data or raw, for other

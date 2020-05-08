@@ -2,19 +2,13 @@
 
 import json
 from pathlib import Path
-import pytest
 from unittest.mock import PropertyMock
 
-from click.testing import CliRunner
+import jbxapi
+import pytest
 
 from sandboxapi.cli.joe.commands import joe
 from sandboxapi import SandboxError
-
-
-@pytest.fixture
-def runner():
-    """Provides an object for running CLI commands."""
-    return CliRunner(echo_stdin=True)
 
 
 @pytest.fixture
@@ -63,6 +57,19 @@ def test_joe_unavailable(mocker, runner):
     result = runner.invoke(joe, ['available'])
     assert 'Joe sandbox https://jbxcloud.joesecurity.org/api is unavailable.\n' == result.output
     assert result.exit_code == 1
+
+
+def test_joe_available_invalid_key(mocker, runner):
+    """Test the case where available raises an error because the API key is invalid."""
+    ref = 'Invalid API key.\n'
+    mocker.patch(
+        'jbxapi.JoeSandbox.server_online',
+        new_callable=PropertyMock,
+        side_effect=jbxapi.ApiError({'code': 4, 'message': 'Invalid API key.'}),
+    )
+    result = runner.invoke(joe, ['available'])
+    assert result.output == ref
+    assert result.exit_code == 2
 
 
 def test_joe_available_help(runner):

@@ -1,7 +1,7 @@
 """This module hosts the VMRay Sandbox class."""
 
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 import requests
 
@@ -19,8 +19,8 @@ class VMRaySandbox(Sandbox):
 
     def __init__(
             self,
-            api_key: str = '',
-            host: str = 'cloud.vmray.com',
+            api_key: Optional[str] = None,
+            host: Optional[str] = None,
             **kwargs,
     ) -> None:
         """Instantiate a new VMRaySandbox object."""
@@ -32,29 +32,6 @@ class VMRaySandbox(Sandbox):
         self._headers = {
             'Authorization': 'api_key {}'.format(self.api_key)
         }
-
-    # def analyze(self, handle: IO[Any], filename: str) -> str:
-    #     """A wrapper method for the new submit_sample() method. This method will be deprecated in a future version.
-    #
-    #     .. deprecated:: 2.0.0
-    #
-    #     :param handle: A file-like object.
-    #     :param filename: The name of the file.
-    #     :return: The item ID of the submitted sample.
-    #     """
-    #     warnings.warn('The analyze() method is deprecated in favor of submit_sample().', DeprecationWarning)
-    #     handle.seek(0)
-    #     response = requests.post(
-    #         '{}/sample/submit'.format(self.base_url),
-    #         headers=self._headers,
-    #         files={'sample_file': (filename, handle)},
-    #         **self._request_opts,
-    #     )
-    #     if response.status_code != requests.codes.ok:
-    #         raise SandboxError('{}'.format(self.decode(response)["error_msg"]))
-    #
-    #     output = self.decode(response)
-    #     return output['data']['samples'][0]['sample_id']
 
     def submit_sample(self, filepath: Union[str, Path]) -> str:
         """Submit a new sample to the VMRay sandbox for analysis.
@@ -186,32 +163,6 @@ class VMRaySandbox(Sandbox):
             # This is a detailed report.
             top_score = int(report['vti']['vti_score'])
         return top_score // 10
-
-
-# class VMRayAPI(VMRaySandbox):
-#     """Legacy VMRay Sandbox class used for backwards compatibility.
-#
-#     .. deprecated:: 2.0.0
-#
-#     :param api_key: The API key to access the VMRay sandbox.
-#     :param url: The VMRay API URL.
-#     :param verify_ssl: Verify SSL Certificates if True, otherwise ignore self-signed certificates.
-#     """
-#
-#     def __init__(self, api_key: str, url: Optional[str] = None, verify_ssl: bool = True, **kwargs) -> None:
-#         """Initialize the interface to VMRay Sandbox API."""
-#         warnings.warn('The VMRayAPI class is deprecated in favor of VMRaySandbox.', DeprecationWarning)
-#         api = ''
-#         url = url or 'https://cloud.vmray.com'
-#         if '://' in url:
-#             _, host = url.split('//', maxsplit=1)
-#         else:
-#             host = url
-#         if '/' in host:
-#             host, api = host.split('/', maxsplit=1)
-#         super().__init__(api_key=api_key, host=host, verify_ssl=verify_ssl, **kwargs)
-#         if api:
-#             self.base_url = 'https://{}/{}'.format(host, api)
 
 
 class VMRayAPI(SandboxAPI):
@@ -348,8 +299,10 @@ class VMRayAPI(SandboxAPI):
             raise SandboxError(e)
 
         # assume report format json.
-        response = self._request("/analysis/{analysis_id}/archive/logs/summary.json".format(analysis_id=analysis_id),
-                   headers=self.headers)
+        response = self._request("/analysis/{analysis_id}/archive/logs/summary.json".format(
+            analysis_id=analysis_id),
+            headers=self.headers,
+        )
 
         # if response is JSON, return it as an object.
         try:
@@ -360,7 +313,8 @@ class VMRayAPI(SandboxAPI):
         # otherwise, return the raw content.
         return response.content
 
-    def score(self, report):
+    @staticmethod
+    def score(report):
         """Pass in the report from self.report(), get back an int 0-100"""
         try:
             return report['vti']['vti_score']

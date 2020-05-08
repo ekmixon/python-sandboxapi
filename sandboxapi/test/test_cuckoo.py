@@ -191,54 +191,6 @@ def test_arg_set():
     assert not hasattr(sandbox, 'nada')
 
 
-# def test_analyze_ok(mocker, ref_file_path, sandbox):
-#     """Verify the analyze() logic and parsing works correctly."""
-#     ref_response = {
-#         'task_id': 1
-#     }
-#     dummy_file = ref_file_path / 'files' / 'dummy.txt'
-#     mocker.patch(
-#         'requests.post',
-#         return_value=MagicMock(
-#             content=bytes(json.dumps(ref_response), encoding='utf-8'),
-#             status_code=200,
-#         ),
-#     )
-#     with dummy_file.open('rb') as file:
-#         res_id = sandbox.analyze(file, 'dummy.txt')
-#     assert res_id == 1
-
-
-# def test_analyze_duplicate(mocker, ref_file_path, sandbox):
-#     """Verify the case where analyze() sends a duplicate file."""
-#     dummy_file = ref_file_path / 'files' / 'dummy.txt'
-#     mocker.patch(
-#         'requests.post',
-#         return_value=MagicMock(content=bytes('Nope!', encoding='utf-8'), status_code=400),
-#     )
-#     with pytest.raises(SandboxError):
-#         with dummy_file.open('rb') as file:
-#             sandbox.analyze(file, 'dummy')
-
-
-# def test_analyze_bad_response(mocker, ref_file_path, sandbox):
-#     """Verify the case where analyze() receives an unrecognized response."""
-#     ref_response = {
-#         'Boo': "I'm a ghost!"
-#     }
-#     dummy_file = ref_file_path / 'files' / 'dummy.txt'
-#     mocker.patch(
-#         'requests.post',
-#         return_value=MagicMock(
-#             content=bytes(json.dumps(ref_response), encoding='utf-8'),
-#             status_code=200,
-#         ),
-#     )
-#     with pytest.raises(KeyError):
-#         with dummy_file.open('rb') as file:
-#             sandbox.analyze(file, 'dummy.txt')
-
-
 def test_submit_sample_ok(mocker, sandbox):
     """Verify the submit_sample() logic and parsing works correctly."""
     ref_response = {
@@ -492,28 +444,22 @@ def test_score_bad_report(sandbox):
         sandbox.score({})
 
 
-def test_config(sandbox):
+def test_config(ref_file_path, sandbox):
     """Verify that config is set by passing in the correct argument."""
     assert hasattr(sandbox, 'config')
     assert not sandbox.config
     box = CuckooSandbox(
-        config=Path(__file__).parent / 'files' / 'ref_config.json',
+        config=ref_file_path / 'files' / 'ref_config.cfg',
         port=8888,
     )
     assert hasattr(box, 'config')
+    assert hasattr(box, 'timeout_secs')
+    assert box.timeout_secs == 30
+    assert hasattr(box, 'verify_ssl')
+    assert box.verify_ssl is True
     assert not hasattr(box.config, 'port')
     assert box.config.use_https
+    assert box.config.use_https is True
+    assert hasattr(box, 'use_https')
+    assert box.use_https is True
     assert box.base_url == 'https://localhost:8888'
-
-
-# def test_cuckoo_legacy_class():
-#     """Verify the legacy class constructor is backwards compatible."""
-#     sandbox = cuckoo.CuckooAPI('http://10.1.10.9:8888', verify_ssl=True)
-#     assert sandbox.base_url == 'http://10.1.10.9:8888'
-#     assert sandbox.verify_ssl
-#     sandbox = cuckoo.CuckooAPI('10.1.10.9', 8888, 'dummy')
-#     assert sandbox.base_url == 'http://10.1.10.9:8888/dummy'
-#     sandbox = cuckoo.CuckooAPI('localhost')
-#     assert sandbox.base_url == 'http://localhost:8090'
-#     sandbox = cuckoo.CuckooAPI('10.1.10.9/dummy')
-#     assert sandbox.base_url == 'http://10.1.10.9:8090/dummy'

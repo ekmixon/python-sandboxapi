@@ -72,58 +72,6 @@ def test_arg_set():
     assert not hasattr(sandbox, 'nada')
 
 
-# def test_analyze_ok(mocker, ref_file_path, ref_submit_sample_ok, sandbox):
-#     """Verify the analyze() method works correctly."""
-#     dummy_file = ref_file_path / 'files' / 'dummy.txt'
-#     ref_post = mocker.patch(
-#         'requests.post',
-#         return_value=MagicMock(
-#             content=bytes(json.dumps(ref_submit_sample_ok), encoding='utf-8'),
-#             status_code=201,
-#         ),
-#     )
-#     with dummy_file.open('rb') as file:
-#         eval_id = sandbox.analyze(file, 'dummy.txt')
-#     assert eval_id == '22'
-#     call_args, call_kwargs = ref_post.call_args
-#     assert call_args[0] == 'https://www.reverse.it/api/v2/submit/file'
-#     assert 'environment_id' in call_kwargs['data']
-#     assert 'api-key' in call_kwargs['headers']
-
-
-# def test_analyze_error(mocker, ref_file_path, sandbox):
-#     """Verify the case where analyze() gets an error response from the server."""
-#     ref_response = {
-#         'message': "I'm an error."
-#     }
-#     dummy_file = ref_file_path / 'files' / 'dummy.txt'
-#     mocker.patch(
-#         'requests.post',
-#         return_value=MagicMock(
-#             content=bytes(json.dumps(ref_response), encoding='utf-8'),
-#             status_code=403,
-#         ),
-#     )
-#     with pytest.raises(SandboxError):
-#         with dummy_file.open('rb') as file:
-#             sandbox.analyze(file, 'dummy.txt')
-
-
-# def test_analyze_unknown(mocker, ref_file_path, sandbox):
-#     """Verify the case where analyze() gets an unexpected response from the server."""
-#     dummy_file = ref_file_path / 'files' / 'dummy.txt'
-#     mocker.patch(
-#         'requests.post',
-#         return_value=MagicMock(
-#             content=bytes("Server error", encoding='utf-8'),
-#             status_code=500,
-#         ),
-#     )
-#     with pytest.raises(SandboxError):
-#         with dummy_file.open('rb') as file:
-#             sandbox.analyze(file, 'dummy.txt')
-
-
 def test_submit_sample_ok(mocker, ref_submit_sample_ok, sandbox):
     """Verify the submit_sample() method works correctly."""
     mocker.patch('pathlib.Path.open')
@@ -304,7 +252,6 @@ def test_available_ok(mocker, sandbox):
             status_code=200,
         ),
     )
-    # assert sandbox.is_available()
     assert sandbox.available
 
 
@@ -316,7 +263,6 @@ def test_available_not_ok(mocker, sandbox):
             status_code=500,
         ),
     )
-    # assert not sandbox.is_available()
     assert not sandbox.available
 
 
@@ -339,7 +285,6 @@ def test_available_ok_cloud(mocker, sandbox):
             ),
         ]
     )
-    # assert sandbox.is_available()
     assert sandbox.available
 
 
@@ -362,7 +307,6 @@ def test_available_not_ok_cloud(mocker, sandbox):
             ),
         ]
     )
-    # assert not sandbox.is_available()
     assert not sandbox.available
 
 
@@ -448,24 +392,13 @@ def test_config(sandbox):
     assert hasattr(sandbox, 'config')
     assert not sandbox.config
     box = FalconSandbox(
-        config=Path(__file__).parent / 'files' / 'ref_config.json',
+        config=Path(__file__).parent / 'files' / 'ref_config.cfg',
     )
     assert box.config
+    assert hasattr(box, 'timeout_secs')
+    assert box.timeout_secs == 30
     assert not hasattr(box.config, 'api_key')
     assert not hasattr(box.config, 'host')
+    assert hasattr(box, 'environment')
+    assert box.environment == 120
     assert box.base_url == 'https://www.reverse.it/api/v2'
-
-
-# def test_falcon_legacy_class():
-#     """Verify the legacy class constructor is backwards compatible."""
-#     sandbox = falcon.FalconAPI(APIKEY, 'https://falcon-sandbox.com', 120)
-#     assert sandbox.base_url == 'https://falcon-sandbox.com/api/v2'
-#     assert APIKEY in sandbox._headers.values()
-#     assert sandbox.environment == 120
-#     sandbox = falcon.FalconAPI(APIKEY)
-#     assert sandbox.base_url == 'https://www.reverse.it/api/v2'
-#     assert sandbox.environment == 100
-#     sandbox = falcon.FalconAPI(APIKEY, 'falcon-sandbox.com')
-#     assert sandbox.base_url == 'https://falcon-sandbox.com/api/v2'
-#     sandbox = falcon.FalconAPI(APIKEY, 'https://falcon-sandbox.com/api/v3')
-#     assert sandbox.base_url == 'https://falcon-sandbox.com/api/v3'

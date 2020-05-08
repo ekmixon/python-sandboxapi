@@ -5,16 +5,8 @@ from pathlib import Path
 import pytest
 from unittest.mock import PropertyMock
 
-from click.testing import CliRunner
-
 from sandboxapi.cli.falcon.commands import falcon
 from sandboxapi import SandboxError
-
-
-@pytest.fixture
-def runner():
-    """Provides an object for running CLI commands."""
-    return CliRunner(echo_stdin=True)
 
 
 @pytest.fixture
@@ -51,6 +43,16 @@ Commands:
   submit     Submit a sample to the Falcon sandbox.
 """
     result = runner.invoke(falcon, ['--help'])
+    assert result.output == ref
+    assert result.exit_code == 0
+
+
+def test_falcon_config(mocker, runner):
+    """Verify that loading parameters from a config file works correctly."""
+    ref = 'Falcon sandbox https://blernsball/api/v2 is available.\n'
+    config_file = Path(__file__).parent / 'files' / 'config.cfg'
+    mocker.patch('sandboxapi.falcon.FalconSandbox.available', new_callable=PropertyMock, return_value=True)
+    result = runner.invoke(falcon, ['--config', str(config_file), '--host', 'blernsball', 'available'])
     assert result.output == ref
     assert result.exit_code == 0
 

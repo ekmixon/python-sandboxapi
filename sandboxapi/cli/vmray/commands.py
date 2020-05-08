@@ -35,7 +35,11 @@ def vmray(ctx: click.Context, apikey: str, config: str, host: str, proxy: str, t
         sandbox_args['timeout'] = timeout
     if ssl:
         sandbox_args['verify_ssl'] = ssl
-    ctx.obj = VMRaySandbox(**sandbox_args)
+    try:
+        ctx.obj = VMRaySandbox(**sandbox_args)
+    except SandboxError as err:
+        click.secho(str(err), err=True, fg='red')
+        ctx.exit(20)
 
 
 @vmray.command(short_help='Check to see if the VMRay sandbox is available.')

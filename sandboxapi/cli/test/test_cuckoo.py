@@ -2,19 +2,10 @@
 
 import json
 from pathlib import Path
-import pytest
 from unittest.mock import PropertyMock
-
-from click.testing import CliRunner
 
 from sandboxapi.cli.cuckoo.commands import cuckoo
 from sandboxapi import SandboxError
-
-
-@pytest.fixture
-def runner():
-    """Provides an object for running CLI commands."""
-    return CliRunner(echo_stdin=True)
 
 
 def test_help_output(runner):
@@ -51,11 +42,21 @@ Commands:
 def test_cuckoo_config(mocker, runner):
     """Verify that loading parameters from a config file works correctly."""
     ref = 'Cuckoo sandbox https://example.com:5555 is available.\n'
-    config_file = Path(__file__).parent / 'files' / 'config.json'
+    config_file = Path(__file__).parent / 'files' / 'config.cfg'
     mocker.patch('sandboxapi.cuckoo.CuckooSandbox.available', new_callable=PropertyMock, return_value=True)
     result = runner.invoke(cuckoo, ['--config', str(config_file), 'available'])
     assert result.output == ref
     assert result.exit_code == 0
+
+
+def test_cuckoo_config_read_fail(mocker, runner):
+    """Test the case where the config option is given, but the file doesn't exist."""
+    ref = """[Errno 2] No such file or directory: 'unknown/test.cfg'\n"""
+    config_file = Path('unknown') / 'test.cfg'
+    mocker.patch('sandboxapi.cuckoo.CuckooSandbox.available', new_callable=PropertyMock, return_value=True)
+    result = runner.invoke(cuckoo, ['--config', str(config_file), 'available'])
+    assert result.output == ref
+    assert result.exit_code == 20
 
 
 def test_cuckoo_available(mocker, runner):

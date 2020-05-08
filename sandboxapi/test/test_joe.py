@@ -112,36 +112,6 @@ def test_arg_set():
     assert not hasattr(sandbox, 'nada')
 
 
-# def test_analyze_ok(mocker, ref_file_path, sandbox):
-#     """Verify the analyze() method works correctly."""
-#     ref_response = {
-#         'submission_id': 22,
-#     }
-#     dummy_file = ref_file_path / 'files' / 'dummy.txt'
-#     mocker.patch('jbxapi.JoeSandbox.submit_sample', return_value=ref_response)
-#     with dummy_file.open('rb') as file:
-#         eval_id = sandbox.analyze(file, 'dummy.txt')
-#     assert eval_id == 22
-
-
-# def test_analyze_api_error(api_error, mocker, ref_file_path, sandbox):
-#     """Verify the case where jbxapi gives an api error and is wrapped by a SandboxError."""
-#     dummy_file = ref_file_path / 'files' / 'dummy.txt'
-#     mocker.patch('jbxapi.JoeSandbox.submit_sample', side_effect=api_error)
-#     with pytest.raises(SandboxError):
-#         with dummy_file.open('rb') as file:
-#             sandbox.analyze(file, 'dummy.txt')
-
-
-# def test_analyze_connection_error(connection_error, mocker, ref_file_path, sandbox):
-#     """Verify the case where jbxapi gives a connection error is wrapped by a SandboxError."""
-#     dummy_file = ref_file_path / 'files' / 'dummy.txt'
-#     mocker.patch('jbxapi.JoeSandbox.submit_sample', side_effect=connection_error)
-#     with pytest.raises(SandboxError):
-#         with dummy_file.open('rb') as file:
-#             sandbox.analyze(file, 'dummy.txt')
-
-
 def test_submit_sample_ok(mocker, sandbox):
     """Verify the submit_sample() method works correctly."""
     ref_response = {
@@ -208,7 +178,6 @@ def test_get_webid_error(api_error, connection_error, mocker, sandbox):
 def test_available_ok(mocker, sandbox):
     """Verify the available property works correctly."""
     mocker.patch('jbxapi.JoeSandbox.server_online', return_value={'online': True})
-    # assert sandbox.is_available() is True
     assert sandbox.available is True
 
 
@@ -295,19 +264,9 @@ def test_config(sandbox):
     assert hasattr(sandbox, 'config')
     assert not sandbox.config
     box = JoeSandbox(
-        config=Path(__file__).parent / 'files' / 'ref_config.json',
+        config=Path(__file__).parent / 'files' / 'ref_config.cfg',
     )
     assert box.config
     assert not hasattr(box.config, 'api_key')
     assert not hasattr(box.config, 'host')
     assert box.base_url == 'https://jbxcloud.joesecurity.org/api'
-
-
-# def test_joe_legacy_class():
-#     """Verify the legacy class constructor is backwards compatible."""
-#     sandbox = joe.JoeAPI(APIKEY, 'http://localhost/api2', True, 50, False, 5)
-#     assert not sandbox.verify_ssl
-#     assert sandbox.base_url == 'https://localhost/api2'
-#     sandbox = joe.JoeAPI(APIKEY, 'localhost', True)
-#     assert sandbox.verify_ssl
-#     assert sandbox.base_url == 'https://localhost/api'

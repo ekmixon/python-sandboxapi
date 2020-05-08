@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 import requests
 
@@ -29,8 +29,8 @@ class WildFireSandbox(Sandbox):
 
     def __init__(
             self,
-            api_key: str = '',
-            host: str = 'wildfire.paloaltonetworks.com',
+            api_key: Optional[str] = None,
+            host: Optional[str] = None,
             **kwargs,
     ) -> None:
         """Create a new WildFireSandbox object with default base url and score."""
@@ -39,30 +39,6 @@ class WildFireSandbox(Sandbox):
         host = self._format_host(host)
         self.api_key = self._set_attribute(api_key, '', 'api_key')
         self.base_url = 'https://{}/publicapi'.format(host)
-
-    # def analyze(self, handle: IO[Any], filename: str) -> str:
-    #     """A wrapper method for the new submit_sample() method. This method will be deprecated in a future version.
-    #
-    #     .. deprecated:: 2.0.0
-    #
-    #     :param handle: A file-like object.
-    #     :param filename: The name of the file.
-    #     :return: The item ID of the submitted sample.
-    #     """
-    #     warnings.warn('The analyze() method is deprecated in favor of submit_sample().', DeprecationWarning)
-    #     handle.seek(0)
-    #     response = requests.post(
-    #         '{}/submit/file'.format(self.base_url),
-    #         data={'apikey': self.api_key},
-    #         files={'file': (filename, handle)},
-    #         **self._request_opts,
-    #     )
-    #     if response.status_code == requests.codes.ok:
-    #         output = self.decode(response)
-    #         item_hash = output['wildfire']['upload-file-info']['sha256']
-    #     else:
-    #         raise SandboxError('{}: {}'.format(response.content.decode("utf-8"), response.status_code))
-    #     return item_hash
 
     def submit_sample(self, filepath: Union[str, Path]) -> str:
         """Submit a new sample to the WildFire sandbox for analysis.
@@ -239,31 +215,6 @@ class WildFireSandbox(Sandbox):
         return output
 
 
-# class WildFireAPI(WildFireSandbox):
-#     """Legacy WildFire Sandbox class used for backwards compatibility.
-#
-#     .. deprecated:: 2.0.0
-#
-#     :param str api_key: The customer API key.
-#     :param str url: The WildFire API URL.
-#     """
-#
-#     def __init__(self, api_key: str = '', url: str = '', verify_ssl: bool = True, **kwargs) -> None:
-#         """Initialize the interface to the WildFire Sandbox API."""
-#         warnings.warn('The WildFireAPI class is deprecated in favor of WildFireSandbox.', DeprecationWarning)
-#         api = ''
-#         url = url or 'wildfire.paloaltonetworks.com'
-#         if '://' in url:
-#             _, host = url.split('//', maxsplit=1)
-#         else:
-#             host = url
-#         if '/' in host:
-#             host, api = host.split('/', maxsplit=1)
-#         super().__init__(api_key=api_key, host=host, verify_ssl=verify_ssl, **kwargs)
-#         if api:
-#             self.base_url = 'https://{}/{}'.format(host, api)
-
-
 class WildFireAPI(SandboxAPI):
     """WildFire Sandbox API wrapper."""
 
@@ -307,7 +258,8 @@ class WildFireAPI(SandboxAPI):
         except (ValueError, KeyError, IndexError) as e:
             raise SandboxError("error in analyze {}".format(e))
 
-    def decode(self, response):
+    @staticmethod
+    def decode(response):
         """Convert a xml response to a python dictionary.
 
         :param requests.Response response: A Response object with xml content.
