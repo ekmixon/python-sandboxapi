@@ -6,6 +6,7 @@ from typing import Optional, Union
 import requests
 
 from sandboxapi.base import Sandbox, SandboxAPI, SandboxError
+from sandboxapi.common import BENIGN, CommonReport, Domain, File, MALICIOUS, Session, SUSPICIOUS, UNKNOWN
 
 
 class VMRaySandbox(Sandbox):
@@ -147,6 +148,16 @@ class VMRaySandbox(Sandbox):
             raise IndexError('No analysis found in report.')
         return analysis_id
 
+    def common_report(self, item_id: Union[int, str]) -> dict:
+        """Pulls the common format report for the submitted sample.
+
+        :param item_id: The submission id.
+        :return: The common format report.
+        """
+        report = self.report(item_id)
+        common = VMRayReport()
+        return common(report)
+
     def score(self, report: dict) -> int:
         """Get the threat score for the submitted sample.
 
@@ -163,6 +174,102 @@ class VMRaySandbox(Sandbox):
             # This is a detailed report.
             top_score = int(report['vti']['vti_score'])
         return top_score // 10
+
+
+class VMRayReport(CommonReport):
+    """Represents the VMRay Sandbox common format report."""
+
+    def populate(self, report: dict, **kwargs) -> None:
+        """Maps parameters in the VMRay report to the equivalent parameter in the CommonReport.
+
+        :param report: The VMRay analysis report to convert.
+        """
+        # Sandbox info
+        if 'analysis_details' not in report:
+            raise SandboxError('The report is not formatted correctly.')
+        else:
+            analysis = report['analysis_details']
+        self._sandbox.vendor = 'VMRay'
+        self._sandbox.submission_id = analysis.get('job_id')
+        self._sandbox.start_time = analysis.get('creation_time')
+        self._sandbox.duration = analysis.get('vm_analysis_duration_time')
+        self._sandbox.environment = report.get('vm_and_analyzer_details', {}).get('vm_description')
+
+        # Classification
+        status = []
+        states = [
+            ('malicious', MALICIOUS),
+            ('suspicious', SUSPICIOUS),
+            ('not_suspicious', BENIGN),
+        ]
+        artifact_types = report.get('artifacts', {})
+        # "version" is not a valid artifact so it needs to be removed.
+        if 'version' in artifact_types:
+            artifact_types.pop('version')
+        for artifact_type, artifacts in artifact_types.items():
+            for artifact in artifacts:
+                if 'severity' in artifact:
+                    status.append(artifact['severity'])
+        for state in states:
+            if state[0] in status:
+                self._classification.label = state[1]
+                break
+        else:
+            self._classification.label = UNKNOWN
+        self._classification.score = int(report['vti'].get('vti_score', 0)) // 10
+        self._classification.category = report.get('classifications')[0]
+
+        # Files
+        for artifact in artifact_types.get('files', []):
+            hashes = artifact.get('hashes', {})[0]
+            if artifact.get('category', '') == 'SAMPLE':
+                file = File()
+                file.name = artifact.get('filename')
+                file.size = artifact.get('file_size')
+                file.mime = artifact.get('mime_type')
+                file.md5 = hashes.get('md5_hash')
+                file.sha1 = hashes.get('sha1_hash')
+                file.sha256 = hashes.get('sha256_hash')
+                file.ssdeep = hashes.get('ssdeep_hash')
+                for state in states:
+                    if artifact.get('severity', UNKNOWN) == state[0]:
+                        file.classification.label = state[1]
+                        break
+                else:
+                    file.classification.label = UNKNOWN
+                self._files.submitted.append(file)
+            else:
+                created = File()
+                created.name = artifact.get('filename')
+                created.size = artifact.get('file_size')
+                created.mime = artifact.get('mime_type')
+                created.md5 = hashes.get('md5_hash')
+                created.sha1 = hashes.get('sha1_hash')
+                created.sha256 = hashes.get('sha256_hash')
+                created.ssdeep = hashes.get('ssdeep_hash')
+                created.classification.label = artifact.get('severity')
+                self._files.created.append(created)
+
+        # Network
+        network = report.get('network', {})
+        if 'dns_requests' in network:
+            for domain in network['dns_requests']:
+                dom = Domain()
+                if domain.get('hostnames'):
+                    dom.name = domain.get('hostnames')[0]
+                if domain.get('ip_addresses'):
+                    dom.ip = domain.get('ip_addresses')[0]
+                self._network.domains.append(dom)
+        sessions = network.get('tcp_sessions', []) + network.get('udp_sessions', [])
+        for session in sessions:
+            sess = Session()
+            conn = session.get('connection', {})
+            sess.des_ip = conn.get('remote_ip_address')
+            sess.des_port = conn.get('remote_port')
+            sess.src_ip = conn.get('local_ip_address')
+            sess.src_port = conn.get('local_port')
+            sess.protocol = session.get('service')
+            self._network.sessions.append(sess)
 
 
 class VMRayAPI(SandboxAPI):

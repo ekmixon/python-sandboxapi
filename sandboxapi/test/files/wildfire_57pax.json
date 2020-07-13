@@ -1,0 +1,294 @@
+{
+    "wildfire": {
+        "version": "2.0",
+        "file_info": {
+            "malware": "yes",
+            "sha1": "ad1585cc43ac22a0e9bc505da699efb1afdd6c12",
+            "filetype": "RTF",
+            "sha256": "4b504e06bedebe7462f307d399e4f1ff1bb891195c476586aad2f632644a2634",
+            "md5": "3f5e1b65dd9c767baebaa31498462fcd",
+            "size": "1934558"
+        },
+        "task_info": {
+            "report": [
+                {
+                    "version": "3.0",
+                    "platform": "60",
+                    "software": "Windows XP, Adobe Reader 9.4.0, Flash 10, Office 2007",
+                    "sha256": "4b504e06bedebe7462f307d399e4f1ff1bb891195c476586aad2f632644a2634",
+                    "md5": "3f5e1b65dd9c767baebaa31498462fcd",
+                    "size": "1934558",
+                    "malware": "yes",
+                    "summary": {
+                        "entry": [
+                            {
+                                "@details": "Http request without User-Agent",
+                                "@id": "2049",
+                                "@score": "1.0",
+                                "#text": "Http request without User-Agent"
+                            },
+                            {
+                                "@details": "Malware often downloads additional malicious executables to augment or update its capabilities. When it does, the malware may disguise these additional executables as images or other non-executable file types to avoid detection.",
+                                "@id": "10",
+                                "@score": "1.0",
+                                "#text": "Downloaded an executable with an incorrect file extension"
+                            },
+                            {
+                                "@details": "Legitimate software creates or modifies files to preserve data across system restarts. Malware may create or modify files to deliver malicious payloads or maintain persistence on a system.",
+                                "@id": "3",
+                                "@score": "0.0",
+                                "#text": "Created or modified a file"
+                            },
+                            {
+                                "@details": "Standard HTTP requests contain a small amount of metadata in the form of an HTTP header. Malware often uses HTTP headers much shorter than those used by legitimate applications, or omits the HTTP header altogether.",
+                                "@id": "17",
+                                "@score": "0.8",
+                                "#text": "Used a short HTTP header"
+                            }
+                        ]
+                    },
+                    "evidence": {
+                        "file": null,
+                        "registry": null,
+                        "process": null,
+                        "mutex": null
+                    },
+                    "timeline": {
+                        "entry": {
+                            "@seq": "1",
+                            "#text": "Created Process C:\\Program Files\\Microsoft Office\\Office12\\WINWORD.EXE"
+                        }
+                    },
+                    "network": {
+                        "TCP": {
+                            "@country": "AU",
+                            "@ip": "202.87.31.222",
+                            "@ja3": "",
+                            "@ja3s": "",
+                            "@port": "80"
+                        },
+                        "dns": [
+                            {
+                                "@query": "jobmalawi.com",
+                                "@response": "ns3.mbunainc.com",
+                                "@type": "NS"
+                            },
+                            {
+                                "@query": "jobmalawi.com",
+                                "@response": "202.87.31.222",
+                                "@type": "A"
+                            },
+                            {
+                                "@query": "jobmalawi.com",
+                                "@response": "ns2.mbunainc.com",
+                                "@type": "NS"
+                            },
+                            {
+                                "@query": "jobmalawi.com",
+                                "@response": "ns1.mbunainc.com",
+                                "@type": "NS"
+                            },
+                            {
+                                "@query": "jobmalawi.com",
+                                "@response": "ns4.mbunainc.com",
+                                "@type": "NS"
+                            }
+                        ],
+                        "url": {
+                            "@host": "jobmalawi.com",
+                            "@method": "GET",
+                            "@uri": "/nn/kk.txt",
+                            "@user_agent": ""
+                        }
+                    },
+                    "process_tree": {
+                        "process": {
+                            "@name": "WINWORD.EXE",
+                            "@pid": "640",
+                            "@text": "C:\\Program Files\\Microsoft Office\\Office12\\WINWORD.EXE"
+                        }
+                    },
+                    "process_list": {
+                        "process": {
+                            "@command": "C:\\Program Files\\Microsoft Office\\Office12\\WINWORD.EXE",
+                            "@name": "WINWORD.EXE",
+                            "@pid": "640",
+                            "process_activity": null,
+                            "registry": null,
+                            "file": null,
+                            "service": null,
+                            "mutex": null,
+                            "java_api": null
+                        }
+                    }
+                },
+                {
+                    "version": "3.0",
+                    "platform": "61",
+                    "software": "Windows 7 x64 SP1, Adobe Reader 11, Flash 11, Office 2010",
+                    "sha256": "4b504e06bedebe7462f307d399e4f1ff1bb891195c476586aad2f632644a2634",
+                    "md5": "3f5e1b65dd9c767baebaa31498462fcd",
+                    "size": "1934558",
+                    "malware": "yes",
+                    "summary": {
+                        "entry": [
+                            {
+                                "@details": "Http request without User-Agent",
+                                "@id": "2049",
+                                "@score": "1.0",
+                                "#text": "Http request without User-Agent"
+                            },
+                            {
+                                "@details": "Malware often downloads additional malicious executables to augment or update its capabilities. When it does, the malware may disguise these additional executables as images or other non-executable file types to avoid detection.",
+                                "@id": "10",
+                                "@score": "1.0",
+                                "#text": "Downloaded an executable with an incorrect file extension"
+                            },
+                            {
+                                "@details": "Legitimate software creates or modifies files to preserve data across system restarts. Malware may create or modify files to deliver malicious payloads or maintain persistence on a system.",
+                                "@id": "3",
+                                "@score": "0.0",
+                                "#text": "Created or modified a file"
+                            },
+                            {
+                                "@details": "A process running on the system may start additional processes to perform actions in the background. This behavior is common to legitimate software as well as malware.",
+                                "@id": "6",
+                                "@score": "0.0",
+                                "#text": "Started a process"
+                            },
+                            {
+                                "@details": "Standard HTTP requests contain a small amount of metadata in the form of an HTTP header. Malware often uses HTTP headers much shorter than those used by legitimate applications, or omits the HTTP header altogether.",
+                                "@id": "17",
+                                "@score": "0.8",
+                                "#text": "Used a short HTTP header"
+                            }
+                        ]
+                    },
+                    "evidence": {
+                        "file": null,
+                        "registry": null,
+                        "process": null,
+                        "mutex": null
+                    },
+                    "timeline": {
+                        "entry": [
+                            {
+                                "@seq": "1",
+                                "#text": "Created Process C:\\Program Files (x86)\\Microsoft Office\\Office14\\WINWORD.EXE"
+                            },
+                            {
+                                "@seq": "2",
+                                "#text": "Created Process C:\\Windows\\splwow64.exe"
+                            }
+                        ]
+                    },
+                    "network": {
+                        "TCP": {
+                            "@country": "AU",
+                            "@ip": "202.87.31.222",
+                            "@ja3": "",
+                            "@ja3s": "",
+                            "@port": "80"
+                        },
+                        "dns": [
+                            {
+                                "@query": "jobmalawi.com",
+                                "@response": "ns3.mbunainc.com",
+                                "@type": "NS"
+                            },
+                            {
+                                "@query": "jobmalawi.com",
+                                "@response": "202.87.31.222",
+                                "@type": "A"
+                            },
+                            {
+                                "@query": "jobmalawi.com",
+                                "@response": "ns2.mbunainc.com",
+                                "@type": "NS"
+                            },
+                            {
+                                "@query": "jobmalawi.com",
+                                "@response": "ns1.mbunainc.com",
+                                "@type": "NS"
+                            },
+                            {
+                                "@query": "jobmalawi.com",
+                                "@response": "ns4.mbunainc.com",
+                                "@type": "NS"
+                            }
+                        ],
+                        "url": {
+                            "@host": "jobmalawi.com",
+                            "@method": "GET",
+                            "@uri": "/nn/kk.txt",
+                            "@user_agent": ""
+                        }
+                    },
+                    "process_tree": {
+                        "process": {
+                            "@name": "WINWORD.EXE",
+                            "@pid": "1500",
+                            "@text": "C:\\Program Files (x86)\\Microsoft Office\\Office14\\WINWORD.EXE",
+                            "child": {
+                                "process": {
+                                    "@name": "splwow64.exe",
+                                    "@pid": "2336",
+                                    "@text": "C:\\Windows\\splwow64.exe"
+                                }
+                            }
+                        }
+                    },
+                    "process_list": {
+                        "process": [
+                            {
+                                "@command": "C:\\Program Files (x86)\\Microsoft Office\\Office14\\WINWORD.EXE",
+                                "@name": "WINWORD.EXE",
+                                "@pid": "1500",
+                                "process_activity": {
+                                    "Create": {
+                                        "@child_pid": "2336",
+                                        "@child_process_image": "C:\\Windows\\splwow64.exe",
+                                        "@command": "C:\\Windows\\splwow64.exe 12288"
+                                    }
+                                },
+                                "registry": null,
+                                "file": null,
+                                "service": null,
+                                "mutex": null,
+                                "java_api": null
+                            },
+                            {
+                                "@command": "C:\\Windows\\splwow64.exe",
+                                "@name": "splwow64.exe",
+                                "@pid": "2336",
+                                "process_activity": null,
+                                "registry": null,
+                                "file": null,
+                                "service": null,
+                                "mutex": null,
+                                "java_api": null
+                            }
+                        ]
+                    }
+                },
+                {
+                    "version": "3.0",
+                    "platform": "105",
+                    "software": "RTF Static Analyzer",
+                    "sha256": "4b504e06bedebe7462f307d399e4f1ff1bb891195c476586aad2f632644a2634",
+                    "md5": "3f5e1b65dd9c767baebaa31498462fcd",
+                    "malware": "suspicious",
+                    "doc_embedded_files": null,
+                    "summary": {
+                        "entry": {
+                            "@details": "Invalid or corrupted documents may contain exploits and should be analyzed dynamically.",
+                            "@id": "5505",
+                            "@score": "0.6",
+                            "#text": "Document is invalid or corrupted"
+                        }
+                    }
+                }
+            ]
+        }
+    }
+}

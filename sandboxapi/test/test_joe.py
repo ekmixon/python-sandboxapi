@@ -6,7 +6,8 @@ from pathlib import Path
 from jbxapi import ApiError, ConnectionError
 import pytest
 
-from sandboxapi import JoeSandbox, SandboxError
+from sandboxapi import SandboxError
+from sandboxapi.joe import JoeSandbox, JoeReport
 
 
 APIKEY = '123456'
@@ -85,6 +86,211 @@ def ref_status():
                 "comments": ""
             },
         ]
+    }
+
+
+@pytest.fixture
+def ref_common_report():
+    """Provides a reference common report."""
+    return {
+        "sandbox_report": {
+            "sandbox_info": {
+                "vendor": "Joe",
+                "url": None,
+                "id": 1130398,
+                "start_time": "09/05/2020 02:01:43",
+                "environment": "Windows 7 (<b>Office 2010 SP2</b>, Java 1.8.0_40 1.8.0_191, Flash 16.0.0.305, Acrobat R"
+                               "eader 11.0.08, Internet Explorer 11, Chrome 55, Firefox 43)"
+            },
+            "classification": {
+                "label": "SUSPICIOUS",
+                "score": 2,
+                "category": None
+            },
+            "files": {
+                "submitted": [
+                    {
+                        "name": "57 Pax.doc",
+                        "path": None,
+                        "hashes": {
+                            "md5": "3f5e1b65dd9c767baebaa31498462fcd",
+                            "sha1": "ad1585cc43ac22a0e9bc505da699efb1afdd6c12",
+                            "sha256": "4b504e06bedebe7462f307d399e4f1ff1bb891195c476586aad2f632644a2634",
+                            "ssdeep": None
+                        },
+                        "mime": None,
+                        "size": None,
+                        "classification": {
+                            "label": "SUSPICIOUS",
+                            "score": 2,
+                            "category": None
+                        }
+                    }
+                ],
+                "created": [
+                    {
+                        "name": "C:\\Users\\user\\AppData\\Local\\Microsoft\\Windows\\Temporary Internet Files\\Content"
+                                ".Word\\~WRS{06F0A53C-FCDF-48D7-878C-5FC4DF3B1DD8}.tmp",
+                        "path": None,
+                        "hashes": {
+                            "md5": "22A797615C1275856CAF45BC7E84A663",
+                            "sha1": "4AAF84FCD8BBEA316FDCCF0220DB402AAA57A18F",
+                            "sha256": "8BA98AF656B2937078D82D1571559A442D42341656A19A05D0D6F9D139785920",
+                            "ssdeep": None
+                        },
+                        "mime": None,
+                        "size": None,
+                        "classification": {
+                            "label": None,
+                            "score": None,
+                            "category": None
+                        }
+                    },
+                    {
+                        "name": "C:\\Users\\user\\AppData\\Local\\Microsoft\\Windows\\Temporary Internet Files\\Content"
+                                ".Word\\~WRS{DDE5E628-90A4-4B5E-88AA-45B3C51F5622}.tmp",
+                        "path": None,
+                        "hashes": {
+                            "md5": "5D4D94EE7E06BBB0AF9584119797B23A",
+                            "sha1": "DBB111419C704F116EFA8E72471DD83E86E49677",
+                            "sha256": "4826C0D860AF884D3343CA6460B0006A7A2CE7DBCCC4D743208585D997CC5FD1",
+                            "ssdeep": None
+                        },
+                        "mime": None,
+                        "size": None,
+                        "classification": {
+                            "label": None,
+                            "score": None,
+                            "category": None
+                        }
+                    },
+                    {
+                        "name": "C:\\Users\\user\\AppData\\Roaming\\Microsoft\\Office\\Recent\\57 Pax.LNK",
+                        "path": None,
+                        "hashes": {
+                            "md5": "B9CE13F45F30C738BCBCE241855FA65A",
+                            "sha1": "88A8D0E9926EE98DEB07288B9B7F5240816C57BE",
+                            "sha256": "A808E273E843C883CFB550088B42E9413340E0D2253BDF665EEF7E7875339B24",
+                            "ssdeep": None
+                        },
+                        "mime": None,
+                        "size": None,
+                        "classification": {
+                            "label": None,
+                            "score": None,
+                            "category": None
+                        }
+                    },
+                    {
+                        "name": "C:\\Users\\user\\AppData\\Roaming\\Microsoft\\Office\\Recent\\index.dat",
+                        "path": None,
+                        "hashes": {
+                            "md5": "3DCB49086E32DF09B4BE634EB931B894",
+                            "sha1": "88F10DB465268ED960A14F949B7947F52C6BDE97",
+                            "sha256": "5B73C5249422D5738001281B9F1C36C009FA8F4700B96A545A7CB82943096AE5",
+                            "ssdeep": None
+                        },
+                        "mime": None,
+                        "size": None,
+                        "classification": {
+                            "label": None,
+                            "score": None,
+                            "category": None
+                        }
+                    },
+                    {
+                        "name": "C:\\Users\\user\\AppData\\Roaming\\Microsoft\\Templates\\~$Normal.dotm",
+                        "path": None,
+                        "hashes": {
+                            "md5": "97B12F4B156C7F8FFF12C62484BA9186",
+                            "sha1": "0930C35451483F0010DD81CCD44CF666510931AF",
+                            "sha256": "963EA98818FA05B3A1AE3F0BD51F3549B1E606FEECD9181B2E3F5C708DDCDBF1",
+                            "ssdeep": None
+                        },
+                        "mime": None,
+                        "size": None,
+                        "classification": {
+                            "label": None,
+                            "score": None,
+                            "category": None
+                        }
+                    },
+                    {
+                        "name": "C:\\Users\\user\\AppData\\Roaming\\Microsoft\\Templates\\~WRD0000.tmp",
+                        "path": None,
+                        "hashes": {
+                            "md5": "3B65431CC8E25A0FC49A488985A2767C",
+                            "sha1": "7C3640ADE08D1357A49FAA60902C36ECC82B8085",
+                            "sha256": "75433221EAA54E9E501052DB756049EB052891178F599AAC993CD94702DC58AF",
+                            "ssdeep": None
+                        },
+                        "mime": None,
+                        "size": None,
+                        "classification": {
+                            "label": None,
+                            "score": None,
+                            "category": None
+                        }
+                    },
+                    {
+                        "name": "C:\\Users\\user\\AppData\\Roaming\\Microsoft\\UProof\\ExcludeDictionaryEN0409.lex",
+                        "path": None,
+                        "hashes": {
+                            "md5": "F3B25701FE362EC84616A93A45CE9998",
+                            "sha1": "D62636D8CAEC13F04E28442A0A6FA1AFEB024BBB",
+                            "sha256": "B3D510EF04275CA8E698E5B3CBB0ECE3949EF9252F0CDC839E9EE347409A2209",
+                            "ssdeep": None
+                        },
+                        "mime": None,
+                        "size": None,
+                        "classification": {
+                            "label": None,
+                            "score": None,
+                            "category": None
+                        }
+                    },
+                    {
+                        "name": "C:\\Users\\user\\Desktop\\~$57 Pax.doc",
+                        "path": None,
+                        "hashes": {
+                            "md5": "CBE488DE967679976399F0D9A039FDF4",
+                            "sha1": "82F493F44457AA642C124F8068248DE6F2E87B6D",
+                            "sha256": "EF0C8A32E3845C71C2DA1D203F0A178E385AC8DF3D97A7D335A7FF85D1A37BA0",
+                            "ssdeep": None
+                        },
+                        "mime": None,
+                        "size": None,
+                        "classification": {
+                            "label": None,
+                            "score": None,
+                            "category": None
+                        }
+                    }
+                ],
+                "modified": [],
+                "deleted": []
+            },
+            "network": {
+                "domains": [
+                    {
+                        "name": "jobmalawi.com",
+                        "ip": "unknown",
+                        "label": "UNKNOWN"
+                    }
+                ],
+                "sessions": [
+                    {
+                        "label": "UNKNOWN",
+                        "protocol": None,
+                        "source_ip": "192.168.1.109",
+                        "source_port": None,
+                        "destination_ip": None,
+                        "destination_port": None,
+                        "pcap": None
+                    }
+                ]
+            }
+        }
     }
 
 
@@ -270,3 +476,11 @@ def test_config(sandbox):
     assert not hasattr(box.config, 'api_key')
     assert not hasattr(box.config, 'host')
     assert box.base_url == 'https://jbxcloud.joesecurity.org/api'
+
+
+def test_joe_common_report(ref_common_report, sandbox):
+    """Verify that the Joe common report works correctly."""
+    ref = Path(__file__).parent / 'files' / 'joe_57pax.json'
+    report = json.loads(ref.read_text())
+    common = JoeReport()
+    assert common(report) == ref_common_report

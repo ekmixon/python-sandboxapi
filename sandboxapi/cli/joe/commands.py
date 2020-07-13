@@ -47,6 +47,9 @@ def joe(ctx: click.Context, apikey: str, config: str, host: str, proxy: str, tim
 def available(ctx: click.Context) -> None:
     """Check to see if the Joe sandbox is up and available."""
     status = None
+    if not ctx.obj.jbx.apikey:
+        click.secho('API key is required.')
+        ctx.exit(5)
     try:
         status = ctx.obj.available
     except SandboxError as err:

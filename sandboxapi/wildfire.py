@@ -9,13 +9,14 @@ import requests
 import xmltodict
 
 from sandboxapi.base import Sandbox, SandboxAPI, SandboxError
+from sandboxapi.common import BENIGN, CommonReport, Domain, File, MALICIOUS, Session, SUSPICIOUS, UNKNOWN
 
 
 # WildFire score values
-BENIGN = 0
-MALWARE = 1
-GRAYWARE = 2
-PHISHING = 4
+WF_BENIGN = 0
+WF_MALWARE = 1
+WF_GRAYWARE = 2
+WF_PHISHING = 4
 
 
 class WildFireSandbox(Sandbox):
@@ -94,7 +95,7 @@ class WildFireSandbox(Sandbox):
         :return: True if the score and report are ready, otherwise False.
         """
         status = self._get_verdict(item_id)
-        if status in [BENIGN, MALWARE, GRAYWARE, PHISHING]:
+        if status in [WF_BENIGN, WF_MALWARE, WF_GRAYWARE, WF_PHISHING]:
             return True
         elif status == -100:
             return False
@@ -184,6 +185,17 @@ class WildFireSandbox(Sandbox):
         )
         return response.content
 
+    def common_report(self, item_id: Union[int, str]) -> dict:
+        """Pulls the common format report for the submitted sample.
+
+        :param item_id: The submission id.
+        :return: The common format report.
+        """
+        report = self.report(item_id)
+        score = self.score(report)
+        common = WildFireReport()
+        return common(report)
+
     def score(self, report: dict) -> int:
         """Get the threat score for the submitted sample.
 
@@ -192,11 +204,11 @@ class WildFireSandbox(Sandbox):
         """
         item_id = report['wildfire']['file_info']['sha256']
         score = self._get_verdict(item_id)
-        if score == MALWARE:
+        if score == WF_MALWARE:
             return 8
-        elif score == GRAYWARE:
+        elif score == WF_GRAYWARE:
             return 2
-        elif score == PHISHING:
+        elif score == WF_PHISHING:
             return 5
         else:
             return score
@@ -215,6 +227,64 @@ class WildFireSandbox(Sandbox):
         return output
 
 
+class WildFireReport(CommonReport):
+    """Represents the WildFire Sandbox common format report."""
+
+    def populate(self, report: dict, score: int = 0) -> None:
+        """Maps parameters in the WildFire report to the equivalent parameter in the CommonReport.
+
+        :param report: The WildFire analysis report to convert.
+        :param score: The score of the submitted file. Wildfire does not provide this in the analysis report.
+        """
+        # Sandbox info
+        if 'wildfire' not in report:
+            raise SandboxError('The report is not formatted correctly.')
+        else:
+            analysis = report['wildfire']
+        file_info = analysis.get('file_info', {})
+        reports = analysis.get('task_info', {}).get('report', [])
+        self._sandbox.vendor = 'WildFire'
+        self._sandbox.submission_id = file_info.get('sha256')
+        self._sandbox.environment = reports[0].get('software')
+
+        # Classification
+        states = {
+            'yes': MALICIOUS,
+            'suspicious': SUSPICIOUS,
+            'no': BENIGN,
+        }
+        status = file_info.get('malware', '')
+        if status in states:
+            self._classification.label = states[status]
+        else:
+            self._classification.label = UNKNOWN
+        self._classification.score = score
+
+        # Files
+        file = File()
+        file.md5 = file_info.get('md5')
+        file.sha1 = file_info.get('sha1')
+        file.sha256 = file_info.get('sha256')
+        file.size = file_info.get('size')
+        file.mime = file_info.get('filetype')
+        file.classification.label = self._classification.label
+        file.classification.score = score
+        self._files.submitted.append(file)
+
+        # Network
+        network = reports[0].get('network', {})
+        domains = network.get('dns', [])
+        for domain in domains:
+            dom = Domain()
+            dom.name = domain.get('@query')
+            self._network.domains.append(dom)
+        session = network.get('TCP', {})
+        sess = Session()
+        sess.des_ip = session.get('@ip')
+        sess.des_port = session.get('@port')
+        self._network.sessions.append(sess)
+
+
 class WildFireAPI(SandboxAPI):
     """WildFire Sandbox API wrapper."""
 
@@ -228,7 +298,7 @@ class WildFireAPI(SandboxAPI):
         self.base_url = url or 'https://wildfire.paloaltonetworks.com'
         self.api_url = self.base_url + '/publicapi'
         self._api_key = api_key
-        self._score = BENIGN
+        self._score = WF_BENIGN
         self.verify_ssl = verify_ssl
 
     def analyze(self, handle, filename):
@@ -351,11 +421,11 @@ class WildFireAPI(SandboxAPI):
         :rtype: int
         :return: The assigned threat score.
         """
-        if self._score == MALWARE:
+        if self._score == WF_MALWARE:
             return 8
-        elif self._score == GRAYWARE:
+        elif self._score == WF_GRAYWARE:
             return 2
-        elif self._score == PHISHING:
+        elif self._score == WF_PHISHING:
             return 5
         else:
             return self._score

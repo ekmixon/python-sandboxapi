@@ -8,6 +8,7 @@ import jbxapi
 from jbxapi import ApiError, ConnectionError
 
 from sandboxapi.base import Sandbox, SandboxAPI, SandboxError
+from sandboxapi.common import BENIGN, CommonReport, Domain, File, MALICIOUS, Session, SUSPICIOUS, UNKNOWN
 
 
 class JoeSandbox(Sandbox):
@@ -134,6 +135,16 @@ class JoeSandbox(Sandbox):
             raise SandboxError(err)
         return report
 
+    def common_report(self, item_id: Union[int, str]) -> dict:
+        """Pulls the common format report for the submitted sample.
+
+        :param item_id: The submission id.
+        :return: The common format report.
+        """
+        report = self.report(item_id)
+        common = JoeReport()
+        return common(report)
+
     def score(self, report: dict) -> int:
         """Get the threat score for the submitted sample.
 
@@ -146,6 +157,77 @@ class JoeSandbox(Sandbox):
         except (ApiError, ConnectionError) as err:
             raise SandboxError(err)
         return int(score / max_score * 10)
+
+
+class JoeReport(CommonReport):
+    """Represents the Joe Sandbox common format report."""
+
+    def populate(self, report: dict, **kwargs) -> None:
+        """Maps parameters in the Joe report to the equivalent parameter in the CommonReport.
+
+        :param report: The Joe analysis report to convert.
+        """
+        # Sandbox info
+        if 'analysis' not in report:
+            raise SandboxError('The report is not formatted correctly.')
+        else:
+            analysis = report['analysis']
+        self._sandbox.vendor = 'Joe'
+        self._sandbox.submission_id = analysis.get('id')
+        self._sandbox.start_time = '{} {}'.format(
+            analysis.get('startdate'),
+            analysis.get('starttime'),
+        )
+        self._sandbox.environment = analysis.get('system')
+
+        # Classification
+        status = analysis.get('detection', {})
+        states = {
+            'malicious': MALICIOUS,
+            'suspicious': SUSPICIOUS,
+            'clean': BENIGN,
+            'unknown': UNKNOWN,
+        }
+        for state in states:
+            if status.get(state) is True:
+                self._classification.label = states[state]
+                break
+        self._classification.score = int(int(status.get('score', 0)) / int(status.get('maxscore')) * 10)
+
+        # Files
+        file = File()
+        file.name = analysis.get('sample')
+        file.md5 = analysis['hashes'].get('md5')
+        file.sha1 = analysis['hashes'].get('sha1')
+        file.sha256 = analysis['hashes'].get('sha256')
+        file.classification.label = self._classification.label
+        file.classification.score = self._classification.score
+        self._files.submitted.append(file)
+        for file in analysis.get('dropped', {}).get('file'):
+            created = File()
+            created.name = file.get('name')
+            created.md5 = file.get('md5')
+            created.sha1 = file.get('sha1')
+            created.sha256 = file.get('sha256')
+            self._files.created.append(created)
+
+        # Network
+        dom_path = analysis.get('contacted', {}).get('domains', {})
+        if dom_path:
+            for domain in dom_path.get('domain', []):
+                dom = Domain()
+                dom.name = domain.get('name')
+                dom.ip = domain.get('ip')
+                dom.label = MALICIOUS if domain.get('malicious', False) is True else UNKNOWN
+                self._network.domains.append(dom)
+        sess_path = analysis.get('contacted', {}).get('ips', {})
+
+        if sess_path:
+            for ip in sess_path.get('ip', []):
+                sess = Session()
+                sess.src_ip = ip.get('$')
+                sess.label = MALICIOUS if ip.get('@malicious', "false") == "true" else UNKNOWN
+                self._network.sessions.append(sess)
 
 
 class JoeAPI(SandboxAPI):

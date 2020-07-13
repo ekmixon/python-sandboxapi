@@ -1,12 +1,14 @@
 """This module contains unit tests for the WildFireSandbox class."""
 
+import json
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
 from requests.exceptions import Timeout
 
 from sandboxapi import WildFireSandbox, SandboxError
-from sandboxapi.wildfire import BENIGN, GRAYWARE, MALWARE, PHISHING
+from sandboxapi.wildfire import WF_BENIGN, WF_GRAYWARE, WF_MALWARE, WF_PHISHING, WildFireReport
 
 
 APIKEY = '123456'
@@ -62,6 +64,91 @@ def ref_check_item():
     </get-verdict-info>
 </wildfire>""".format(status)
     return create_response
+
+
+@pytest.fixture
+def ref_common_report():
+    """Provides a reference common report."""
+    return {
+        "sandbox_report": {
+            "sandbox_info": {
+                "vendor": "WildFire",
+                "url": None,
+                "id": "4b504e06bedebe7462f307d399e4f1ff1bb891195c476586aad2f632644a2634",
+                "start_time": None,
+                "environment": "Windows XP, Adobe Reader 9.4.0, Flash 10, Office 2007"
+            },
+            "classification": {
+                "label": "MALICIOUS",
+                "score": 8,
+                "category": None
+            },
+            "files": {
+                "submitted": [
+                    {
+                        "name": None,
+                        "path": None,
+                        "hashes": {
+                            "md5": "3f5e1b65dd9c767baebaa31498462fcd",
+                            "sha1": "ad1585cc43ac22a0e9bc505da699efb1afdd6c12",
+                            "sha256": "4b504e06bedebe7462f307d399e4f1ff1bb891195c476586aad2f632644a2634",
+                            "ssdeep": None
+                        },
+                        "mime": "RTF",
+                        "size": "1934558",
+                        "classification": {
+                            "label": "MALICIOUS",
+                            "score": 8,
+                            "category": None
+                        }
+                    }
+                ],
+                "created": [],
+                "modified": [],
+                "deleted": []
+            },
+            "network": {
+                "domains": [
+                    {
+                        "name": "jobmalawi.com",
+                        "ip": None,
+                        "label": None
+                    },
+                    {
+                        "name": "jobmalawi.com",
+                        "ip": None,
+                        "label": None
+                    },
+                    {
+                        "name": "jobmalawi.com",
+                        "ip": None,
+                        "label": None
+                    },
+                    {
+                        "name": "jobmalawi.com",
+                        "ip": None,
+                        "label": None
+                    },
+                    {
+                        "name": "jobmalawi.com",
+                        "ip": None,
+                        "label": None
+                    }
+                ],
+                "sessions": [
+                    {
+                        "label": None,
+                        "protocol": None,
+                        "source_ip": None,
+                        "source_port": None,
+                        "destination_ip": "202.87.31.222",
+                        "destination_port": "80",
+                        "pcap": None
+                    }
+                ]
+            }
+        }
+    }
 
 
 def test_base_url(sandbox):
@@ -300,7 +387,15 @@ def test_score(mocker, sandbox):
             }
         }
     }
-    mocker.patch('sandboxapi.wildfire.WildFireSandbox._get_verdict', side_effect=(BENIGN, MALWARE, GRAYWARE, PHISHING))
+    mocker.patch(
+        'sandboxapi.wildfire.WildFireSandbox._get_verdict',
+        side_effect=(
+            WF_BENIGN,
+            WF_MALWARE,
+            WF_GRAYWARE,
+            WF_PHISHING,
+        )
+    )
     assert sandbox.score(ref_report) == 0
     assert sandbox.score(ref_report) == 8
     assert sandbox.score(ref_report) == 2
@@ -321,3 +416,11 @@ def test_config(ref_file_path, sandbox):
     assert not box.api_key
     assert box.timeout_secs == 10
     assert box.base_url == 'https://wildfire.paloaltonetworks.com/publicapi'
+
+
+def test_wildfire_common_report(ref_common_report, sandbox):
+    """Verify that the WildFire common report works correctly."""
+    ref = Path(__file__).parent / 'files' / 'wildfire_57pax.json'
+    report = json.loads(ref.read_text())
+    common = WildFireReport()
+    assert common(report, score=8) == ref_common_report

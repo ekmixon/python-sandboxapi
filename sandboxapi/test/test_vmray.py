@@ -7,6 +7,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from sandboxapi import VMRaySandbox, SandboxError
+from sandboxapi.vmray import VMRayReport
 
 
 APIKEY = '123456'
@@ -44,6 +45,89 @@ def ref_detailed_report_response(ref_file_path):
     """Provides a sample detailed report."""
     filepath = ref_file_path / 'files' / 'vmray_detailed_report_response.json'
     return json.loads(filepath.read_text())
+
+
+@pytest.fixture
+def ref_common_report():
+    """Provides a reference common report."""
+    return {
+        "sandbox_report": {
+            "sandbox_info": {
+                "vendor": "VMRay",
+                "url": None,
+                "id": 5614928,
+                "start_time": "2020-05-09 02:10 (UTC+2)",
+                "environment": "windows_7_(sp1,_64-bit),_ms_office_2016_(64-bit)"
+            },
+            "classification": {
+                "label": "MALICIOUS",
+                "score": 10,
+                "category": "Exploit"
+            },
+            "files": {
+                "submitted": [
+                    {
+                        "name": "C:\\Users\\qj4SUKboE\\Desktop\\57 Pax.doc.rtf",
+                        "path": None,
+                        "hashes": {
+                            "md5": "3f5e1b65dd9c767baebaa31498462fcd",
+                            "sha1": "ad1585cc43ac22a0e9bc505da699efb1afdd6c12",
+                            "sha256": "4b504e06bedebe7462f307d399e4f1ff1bb891195c476586aad2f632644a2634",
+                            "ssdeep": "24576:DAZ+PKJx5JGP33beix7U4km/NuTfPabFJgBaSCBW3jwkeZ5C4OzBojpJS4jBv7R2:g"
+                        },
+                        "mime": "text/rtf",
+                        "size": 1934558,
+                        "classification": {
+                            "label": "MALICIOUS",
+                            "score": None,
+                            "category": None
+                        }
+                    }
+                ],
+                "created": [
+                    {
+                        "name": "C:\\Users\\qj4SUKboE\\AppData\\Roaming\\7899000.com",
+                        "path": None,
+                        "hashes": {
+                            "md5": "d41d8cd98f00b204e9800998ecf8427e",
+                            "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+                            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                            "ssdeep": "3::"
+                        },
+                        "mime": None,
+                        "size": 0,
+                        "classification": {
+                            "label": "not_suspicious",
+                            "score": None,
+                            "category": None
+                        }
+                    }
+                ],
+                "modified": [],
+                "deleted": []
+            },
+            "network": {
+                "domains": [
+                    {
+                        "name": "jobmalawi.com",
+                        "ip": None,
+                        "label": None
+                    }
+                ],
+                "sessions": [
+                    {
+                        "label": None,
+                        "protocol": "http",
+                        "source_ip": "192.168.0.70",
+                        "source_port": None,
+                        "destination_ip": "",
+                        "destination_port": 80,
+                        "pcap": None
+                    }
+                ]
+            }
+        }
+    }
 
 
 @pytest.fixture
@@ -364,3 +448,11 @@ def test_config(sandbox):
     assert box.config.verify_ssl is False
     assert box.verify_ssl is False
     assert box.base_url == 'https://cloud.vmray.com/rest'
+
+
+def test_vmray_common_report(ref_common_report, sandbox):
+    """Verify that the VMRay common report works correctly."""
+    ref = Path(__file__).parent / 'files' / 'vmray_57pax_detailed.json'
+    report = json.loads(ref.read_text())
+    common = VMRayReport()
+    assert common(report) == ref_common_report
