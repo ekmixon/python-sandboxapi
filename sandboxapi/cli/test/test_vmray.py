@@ -30,10 +30,11 @@ Options:
   --help             Show this message and exit.
 
 Commands:
-  available  Check to see if the VMRay sandbox is available.
-  check      Check the completion status of a submission.
-  report     Get the VMRay report for a submitted sample.
-  submit     Submit a sample to the VMRay sandbox.
+  available        Check to see if the VMRay sandbox is available.
+  check            Check the completion status of a submission.
+  detailed-report  Get the detailed report for a submission's analysis ID.
+  report           Get the VMRay report for a submitted sample.
+  submit           Submit a sample to the VMRay sandbox.
 """
     result = runner.invoke(vmray, ['--help'])
     assert result.output == ref
@@ -258,5 +259,85 @@ Options:
   --help       Show this message and exit.
 """
     result = runner.invoke(vmray, ['report', '--help'])
+    assert result.output == ref
+    assert result.exit_code == 0
+
+
+def test_vmray_detailed_report_ok(api_key, mocker, runner):
+    """Verify the detailed-report command works correctly."""
+    ref = {'dummy': 'report'}
+    mocker.patch('sandboxapi.vmray.VMRaySandbox.detailed_report', return_value=ref)
+    result = runner.invoke(vmray, ['--apikey', api_key, 'detailed-report', '--id', 22])
+    assert result.output == json.dumps(ref, indent=4) + '\n'
+    assert result.exit_code == 0
+
+
+def test_vmray_detailed_report_file(api_key, mocker, runner, tmp_path):
+    """Verify that the detailed-report command saves a report to a file correctly."""
+    ref = {'dummy': 'report'}
+    tmp_dir = tmp_path / 'detailed_report'
+    tmp_dir.mkdir()
+    tmp_file = tmp_dir / 'test.json'
+    mocker.patch('sandboxapi.vmray.VMRaySandbox.detailed_report', return_value=ref)
+    result = runner.invoke(vmray, ['--apikey', api_key, 'detailed-report', '--id', 22, '--file', str(tmp_file)])
+    assert result.output == 'The file was written successfully.\n'
+    assert result.exit_code == 0
+    assert tmp_file.read_text() == json.dumps(ref, indent=4)
+
+
+def test_vmray_detailed_report_fail(api_key, mocker, runner):
+    """Test the case where a SandboxError is raised when running the detailed-report command."""
+    mocker.patch('sandboxapi.vmray.VMRaySandbox.detailed_report', side_effect=SandboxError('Boo!'))
+    result = runner.invoke(vmray, ['--apikey', api_key, 'detailed-report', '--id', 22])
+    assert result.output == 'Boo!\n'
+    assert result.exit_code == 1
+
+
+def test_vmray_detailed_report_no_id(api_key, mocker, runner, tmp_path):
+    """Test the case where the detailed-report command prompts for an id."""
+    ref = {'dummy': 'report'}
+    tmp_dir = tmp_path / 'detailed_report'
+    tmp_dir.mkdir()
+    tmp_file = tmp_dir / 'test.json'
+    mocker.patch('sandboxapi.vmray.VMRaySandbox.detailed_report', return_value=ref)
+    result = runner.invoke(vmray, ['--apikey', api_key, 'detailed-report', '--file', str(tmp_file)], input='22\n')
+    assert result.output == 'Id : 22\nThe file was written successfully.\n'
+    assert result.exit_code == 0
+    assert tmp_file.read_text() == json.dumps(ref, indent=4)
+
+
+def test_vmray_detailed_report_ioerror(api_key, mocker, runner, tmp_path):
+    """Test the case where an IOError is raised when trying to write to a file."""
+    ref = {'dummy': 'report'}
+    tmp_dir = tmp_path / 'detailed_report'
+    tmp_dir.mkdir()
+    tmp_file = tmp_dir / 'test.json'
+    mocker.patch('sandboxapi.vmray.VMRaySandbox.detailed_report', return_value=ref)
+    mocker.patch('pathlib.Path.write_text', side_effect=IOError('Boo!'))
+    result = runner.invoke(vmray, ['--apikey', api_key, 'detailed-report', '--id', 22, '--file', str(tmp_file)])
+    assert result.output == 'Boo!\n'
+    assert result.exit_code == 2
+
+
+def test_vmray_detailed_report_no_apikey(runner):
+    """Test the case where no API key is provided to the detailed-report command."""
+    ref = 'API key is required.\n'
+    result = runner.invoke(vmray, ['detailed-report', '--id', 22])
+    assert result.output == ref
+    assert result.exit_code == 5
+
+
+def test_vmray_detailed_report_help(runner):
+    """Verify the output when printing the detailed-report command usage."""
+    ref = """Usage: vmray detailed-report [OPTIONS]
+
+  Fetch the detailed report for an analysis.
+
+Options:
+  --id TEXT    The analysis ID of the analysis to check.  [required]
+  --file TEXT  Optional file path to save the report to.
+  --help       Show this message and exit.
+"""
+    result = runner.invoke(vmray, ['detailed-report', '--help'])
     assert result.output == ref
     assert result.exit_code == 0

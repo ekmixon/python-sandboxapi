@@ -121,5 +121,32 @@ def report(ctx: click.Context, id_: str, file: str) -> None:
         click.echo(output)
 
 
+@vmray.command(short_help="Get the detailed report for a submission's analysis ID.")
+@click.option('--id', 'id_', help='The analysis ID of the analysis to check.', type=str, required=True, prompt=True)
+@click.option('--file', help='Optional file path to save the report to.', type=str)
+@click.pass_context
+def detailed_report(ctx: click.Context, id_: str, file: str) -> None:
+    """Fetch the detailed report for an analysis."""
+    output = ''
+    if not ctx.obj.api_key:
+        click.secho('API key is required.')
+        ctx.exit(5)
+    try:
+        report_ = ctx.obj.detailed_report(id_)
+        output = json.dumps(report_, indent=4)
+    except SandboxError as err:
+        click.secho(str(err), err=True, fg='red')
+        ctx.exit(1)
+    if file:
+        try:
+            Path(file).write_text(output)
+            click.echo('The file was written successfully.')
+        except IOError as err:
+            click.secho(str(err), err=True, fg='red')
+            ctx.exit(2)
+    else:
+        click.echo(output)
+
+
 if __name__ == '__main__':
     vmray(obj=None)

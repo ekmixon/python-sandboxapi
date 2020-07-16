@@ -111,10 +111,10 @@ class VMRaySandbox(Sandbox):
     def detailed_report(self, analysis_id: Union[int, str]) -> dict:
         """Pulls the detailed analysis report from VMRay for a particular analysis.
 
+        .. note:: The analysis ID is NOT the same as the item ID.
+
         :param analysis_id: The ID for a particular analysis.
         :return: The report of the analysis.
-
-        .. note:: The analysis ID is NOT the same as the item ID.
         """
         response = requests.get(
             '{}/analysis/{}/archive/logs/summary.json'.format(self.base_url, analysis_id),
