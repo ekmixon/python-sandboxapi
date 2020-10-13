@@ -26,8 +26,6 @@ class FalconSandbox(Sandbox):
     :param environment: The sandbox runtime environment to use.
     """
 
-    __slots__ = ['_api_key', 'environment', '_headers']
-
     def __init__(
             self,
             api_key: Optional[str] = None,
@@ -220,7 +218,7 @@ class FalconSandbox(Sandbox):
 class FalconAPI(SandboxAPI):
     """Falcon Sandbox API wrapper."""
 
-    def __init__(self, key, url=None, env=100,  **kwargs):
+    def __init__(self, key, url=None, env=100, **kwargs):
         """Initialize the interface to Falcon Sandbox API with key and secret."""
         SandboxAPI.__init__(self, **kwargs)
 

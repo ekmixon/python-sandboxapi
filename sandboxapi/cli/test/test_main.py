@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from sandboxapi.cli.cli import main
+from sandboxapi.cli.__main__ import main
 
 
 def test_help_output(runner):

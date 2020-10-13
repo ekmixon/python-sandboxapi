@@ -4,12 +4,12 @@ import click
 import sys
 
 from sandboxapi.base import Sandbox
-from sandboxapi.cli.cuckoo.commands import cuckoo
-from sandboxapi.cli.falcon.commands import falcon
-from sandboxapi.cli.fireeye.commands import fireeye
-from sandboxapi.cli.joe.commands import joe
-from sandboxapi.cli.vmray.commands import vmray
-from sandboxapi.cli.wildfire.commands import wildfire
+from sandboxapi.cli.commands.cuckoo import cuckoo
+from sandboxapi.cli.commands.falcon import falcon
+from sandboxapi.cli.commands.fireeye import fireeye
+from sandboxapi.cli.commands.joe import joe
+from sandboxapi.cli.commands.vmray import vmray
+from sandboxapi.cli.commands.wildfire import wildfire
 
 
 @click.group()

@@ -27,8 +27,6 @@ class FireEyeSandbox(Sandbox):
     :param legacy_api: Use the older api if True, otherwise False.
     """
 
-    __slots__ = ['_api_token', '_auth', '_headers', '_legacy_api', 'profile']
-
     def __init__(
             self,
             username: Optional[str] = None,
@@ -284,8 +282,9 @@ class FireEyeAPI(SandboxAPI):
 
         if not self.api_token:
             # need to log in
-            response = SandboxAPI._request(self, '/auth/login', 'POST', headers=headers,
-                                                 auth=HTTPBasicAuth(self.username, self.password))
+            response = SandboxAPI._request(
+                self, '/auth/login', 'POST', headers=headers, auth=HTTPBasicAuth(self.username, self.password)
+            )
             if response.status_code != 200:
                 raise SandboxError("Can't log in, HTTP Error {e}".format(e=response.status_code))
             # we are now logged in, save the token
@@ -335,7 +334,7 @@ class FireEyeAPI(SandboxAPI):
 
         # add submission options
         data = {
-            #FIXME: These may need to change, see docs page 36
+            # FIXME: These may need to change, see docs page 36
             'options': '{"application":"0","timeout":"500","priority":"0","profiles":["%s"],'
                        '"analysistype":"0","force":"true","prefetch":"1"}' % self.profile,
         }

@@ -19,8 +19,6 @@ class JoeSandbox(Sandbox):
     :param verify_ssl: Enable or disable checking SSL certificates.
     """
 
-    __slots__ = ['jbx']
-
     accept_tac = True
 
     def __init__(

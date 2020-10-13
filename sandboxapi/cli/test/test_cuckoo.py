@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from unittest.mock import PropertyMock
 
-from sandboxapi.cli.cuckoo.commands import cuckoo
+from sandboxapi.cli.commands.cuckoo import cuckoo
 from sandboxapi import SandboxError
 
 

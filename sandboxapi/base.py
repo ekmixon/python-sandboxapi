@@ -56,8 +56,6 @@ class Sandbox:
     - Can also be a path to a trusted certfile or directory of certificates.
     """
 
-    __slots__ = ['base_url', 'config', 'proxies', '_request_opts', 'timeout_secs', 'verify_ssl']
-
     def __init__(
             self,
             alias: str = Path(__file__).stem,
@@ -111,7 +109,7 @@ class Sandbox:
         :param item_id: The item ID of the analyzed sample.
         :return: The report of the analyzed sample as XML.
         """
-        return bytes('')
+        return bytes()
 
     def pdf_report(self, item_id: Union[int, str]) -> bytes:
         """Pulls the threat report from the sandbox for the submitted sample as a PDF file.
@@ -121,7 +119,7 @@ class Sandbox:
         :param item_id: The item ID of the analyzed sample.
         :return: The report of the analyzed sample as a PDF file.
         """
-        return bytes('')
+        return bytes()
 
     def decode(self, response: requests.Response) -> dict:
         """Parse the HTTP response into a dictionary.
@@ -251,7 +249,7 @@ class Config:
             if sandbox_name in config.sections():
                 for key, value in config.items(sandbox_name):
                     if value.lower() in ('true', 'false', 'yes', 'no', 'on', 'off', '1', '0'):
-                        value = config.getboolean(sandbox_name, key)
+                        value = str(config.getboolean(sandbox_name, key))
                     setattr(self, key, value)
         except FileNotFoundError as err:
             raise SandboxError(err)

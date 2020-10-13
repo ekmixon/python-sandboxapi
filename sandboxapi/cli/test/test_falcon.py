@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from unittest.mock import PropertyMock
 
-from sandboxapi.cli.falcon.commands import falcon
+from sandboxapi.cli.commands.falcon import falcon
 from sandboxapi import SandboxError
 
 
@@ -24,14 +24,17 @@ def test_help_output(runner):
 Options:
   --apikey TEXT                   The customer API key for accessing the Falcon
                                   sandbox.
+
   --config TEXT                   The path to a config file to load sandbox
                                   settings from.
+
   --host TEXT                     The hostname of the Falcon server.
   --environment [ANDROID|WIN7|WIN7HWP|WIN7X64|XENIAL]
                                   The sandbox runtime OS to use.
   --proxy TEXT                    The URI of a proxy server to connect through.
   --timeout INTEGER               The delay in seconds before a request times
                                   out.
+
   --ssl / --no-ssl                Enables SSL certificate validation.
   --help                          Show this message and exit.
 
@@ -347,6 +350,7 @@ Options:
   --id TEXT            The job ID of the sample.  [required]
   --file TEXT          Optional file path to save the report to. Only required
                        for PDF format
+
   --format [json|pdf]  The report format.
   --help               Show this message and exit.
 """

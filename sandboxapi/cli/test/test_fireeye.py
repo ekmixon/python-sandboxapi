@@ -4,7 +4,7 @@ import json
 import pytest
 from unittest.mock import PropertyMock
 
-from sandboxapi.cli.fireeye.commands import fireeye
+from sandboxapi.cli.commands.fireeye import fireeye
 from sandboxapi import SandboxError
 
 
@@ -29,6 +29,7 @@ def test_help_output(runner):
 Options:
   --config TEXT                   The path to a config file to load sandbox
                                   settings from.
+
   --host TEXT                     The hostname of the FireEye server.
   --port INTEGER                  The port of the FireEye server.
   --username TEXT                 A valid username.
@@ -39,6 +40,7 @@ Options:
   --proxy TEXT                    The URI of a proxy server to connect through.
   --timeout INTEGER               The delay in seconds before a request times
                                   out.
+
   --ssl / --no-ssl                Enables SSL certificate validation.
   --help                          Show this message and exit.
 
@@ -284,6 +286,7 @@ Options:
   --id TEXT            The submission key of the job to check.  [required]
   --file TEXT          File path to save the report to. Only required for PDF
                        format
+
   --format [json|xml]  The report format.
   --help               Show this message and exit.
 """

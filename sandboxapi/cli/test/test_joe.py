@@ -7,7 +7,7 @@ from unittest.mock import PropertyMock
 import jbxapi
 import pytest
 
-from sandboxapi.cli.joe.commands import joe
+from sandboxapi.cli.commands.joe import joe
 from sandboxapi import SandboxError
 
 
@@ -43,33 +43,28 @@ Commands:
     assert result.exit_code == 0
 
 
-def test_joe_available(mocker, runner):
+def test_joe_available(api_key, mocker, runner):
     """Verify that the available command works correctly."""
     mocker.patch('sandboxapi.joe.JoeSandbox.available', new_callable=PropertyMock, return_value=True)
-    result = runner.invoke(joe, ['available'])
+    result = runner.invoke(joe, ['--apikey', api_key, 'available'])
     assert 'Joe sandbox https://jbxcloud.joesecurity.org/api is available.\n' == result.output
     assert result.exit_code == 0
 
 
-def test_joe_unavailable(mocker, runner):
+def test_joe_unavailable(api_key, mocker, runner):
     """Test the case where available responds with an unavailable status."""
     mocker.patch('sandboxapi.joe.JoeSandbox.available', new_callable=PropertyMock, return_value=False)
-    result = runner.invoke(joe, ['available'])
+    result = runner.invoke(joe, ['--apikey', api_key, 'available'])
     assert 'Joe sandbox https://jbxcloud.joesecurity.org/api is unavailable.\n' == result.output
     assert result.exit_code == 1
 
 
-def test_joe_available_invalid_key(mocker, runner):
+def test_joe_available_no_key(mocker, runner):
     """Test the case where available raises an error because the API key is invalid."""
-    ref = 'Invalid API key.\n'
-    mocker.patch(
-        'jbxapi.JoeSandbox.server_online',
-        new_callable=PropertyMock,
-        side_effect=jbxapi.ApiError({'code': 4, 'message': 'Invalid API key.'}),
-    )
+    mocker.patch('sandboxapi.joe.JoeSandbox.available', new_callable=PropertyMock, return_value=True)
     result = runner.invoke(joe, ['available'])
-    assert result.output == ref
-    assert result.exit_code == 2
+    assert 'API key is required.\n' == result.output
+    assert result.exit_code == 5
 
 
 def test_joe_available_help(runner):
@@ -315,6 +310,7 @@ Options:
   --id TEXT                The job ID of the job to check.  [required]
   --file TEXT              File path to save the report to. Only required for
                            PDF format.
+
   --format [json|pdf|xml]  The report format.
   --help                   Show this message and exit.
 """

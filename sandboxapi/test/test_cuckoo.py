@@ -459,7 +459,6 @@ def test_config(ref_file_path, sandbox):
     assert box.verify_ssl is True
     assert not hasattr(box.config, 'port')
     assert box.config.use_https
-    assert box.config.use_https is True
     assert hasattr(box, 'use_https')
     assert box.use_https is True
     assert box.base_url == 'https://localhost:8888'

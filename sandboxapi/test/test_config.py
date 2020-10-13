@@ -30,7 +30,7 @@ def test_config_attributes(ref_config_path):
     assert hasattr(config, 'proxies')
     assert config.proxies == 'http://10.10.1.10:1080'
     assert hasattr(config, 'verify_ssl')
-    assert not config.verify_ssl
+    assert config.verify_ssl
     config = Config(ref_config_path, 'fireeye')
     assert hasattr(config, 'username')
     assert config.username == 'maurice_moss'

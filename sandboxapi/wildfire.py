@@ -26,8 +26,6 @@ class WildFireSandbox(Sandbox):
     :param host: The IP address or hostname of the WildFire sandbox server.
     """
 
-    __slots__ = ['api_key']
-
     def __init__(
             self,
             api_key: Optional[str] = None,
@@ -192,7 +190,6 @@ class WildFireSandbox(Sandbox):
         :return: The common format report.
         """
         report = self.report(item_id)
-        score = self.score(report)
         common = WildFireReport()
         return common(report)
 

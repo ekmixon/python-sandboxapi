@@ -445,7 +445,6 @@ def test_config(sandbox):
     assert hasattr(box, 'config')
     assert box.config.proxies == "http://10.10.1.10:1080"
     assert box.config.api_key == '12345678'
-    assert box.config.verify_ssl is False
     assert box.verify_ssl is False
     assert box.base_url == 'https://cloud.vmray.com/rest'
 

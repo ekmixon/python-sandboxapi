@@ -20,8 +20,6 @@ class CuckooSandbox(Sandbox):
     :param use_https: Use https if True, otherwise use http.
     """
 
-    __slots__ = ['_request_opts', '_use_https']
-
     def __init__(
             self,
             username: Optional[str] = None,

@@ -4,7 +4,7 @@ import json
 import pytest
 from unittest.mock import PropertyMock
 
-from sandboxapi.cli.vmray.commands import vmray
+from sandboxapi.cli.commands.vmray import vmray
 from sandboxapi import SandboxError
 
 

@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from unittest.mock import PropertyMock
 
-from sandboxapi.cli.wildfire.commands import wildfire
+from sandboxapi.cli.commands.wildfire import wildfire
 from sandboxapi import SandboxError
 
 
@@ -306,6 +306,7 @@ Options:
   --id TEXT                The file hash of the submission to check.  [required]
   --file TEXT              File path to save the report to. Only required for
                            PDF format.
+
   --format [json|pdf|xml]  The report format.
   --help                   Show this message and exit.
 """
