@@ -89,7 +89,7 @@ class FalconAPI(sandboxapi.SandboxAPI):
         try:
             content = json.loads(response.content.decode('utf-8'))
             status = content['state']
-            if status == 'SUCCESS' or status == 'ERROR':
+            if status in ['SUCCESS', 'ERROR']:
                 return True
 
         except (ValueError, KeyError) as e:
@@ -103,33 +103,26 @@ class FalconAPI(sandboxapi.SandboxAPI):
         :rtype:  bool
         :return: True if service is available, False otherwise.
         """
-        # if the availability flag is raised, return True immediately.
-        # NOTE: subsequent API failures will lower this flag. we do this here
-        # to ensure we don't keep hitting Falcon with requests while
-        # availability is there.
         if self.server_available:
             return True
 
-        # otherwise, we have to check with the cloud.
-        else:
+        try:
+            # Try the on-prem endpoint.
+            response = self._request("/system/heartbeat")
 
-            try:
-                # Try the on-prem endpoint.
-                response = self._request("/system/heartbeat")
-
-                # we've got falcon.
+            # we've got falcon.
+            if response.status_code == 200:
+                self.server_available = True
+                return True
+            elif response.status_code == 403:
+                # Try the public sandbox endpoint.
+                response = self._request("/system/version")
                 if response.status_code == 200:
                     self.server_available = True
                     return True
-                elif response.status_code == 403:
-                    # Try the public sandbox endpoint.
-                    response = self._request("/system/version")
-                    if response.status_code == 200:
-                        self.server_available = True
-                        return True
 
-            except sandboxapi.SandboxError:
-                pass
+        except sandboxapi.SandboxError:
+            pass
 
         self.server_available = False
         return False

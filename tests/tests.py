@@ -85,16 +85,27 @@ class TestCuckoo(unittest.TestCase):
                                           proxies=proxies)
         api._request('/test')
 
-        m_get.assert_called_once_with(api.api_url + '/test', auth=MOCK_ANY,
-                                      headers=MOCK_ANY, params=MOCK_ANY,
-                                      proxies=proxies, verify=MOCK_ANY)
+        m_get.assert_called_once_with(
+            f'{api.api_url}/test',
+            auth=MOCK_ANY,
+            headers=MOCK_ANY,
+            params=MOCK_ANY,
+            proxies=proxies,
+            verify=MOCK_ANY,
+        )
+
 
         api._request('/test', method='POST')
 
-        m_post.assert_called_once_with(api.api_url + '/test', auth=MOCK_ANY,
-                                       headers=MOCK_ANY, data=MOCK_ANY,
-                                       files=None, proxies=proxies,
-                                       verify=MOCK_ANY)
+        m_post.assert_called_once_with(
+            f'{api.api_url}/test',
+            auth=MOCK_ANY,
+            headers=MOCK_ANY,
+            data=MOCK_ANY,
+            files=None,
+            proxies=proxies,
+            verify=MOCK_ANY,
+        )
 
     @responses.activate
     def test_cuckoo_old_style_host_port_path(self):
@@ -296,16 +307,27 @@ class TestFireEye(unittest.TestCase):
                                             proxies=proxies)
         api._request('/test')
 
-        m_get.assert_called_once_with(api.api_url + '/test', auth=MOCK_ANY,
-                                      headers=MOCK_ANY, params=MOCK_ANY,
-                                      proxies=proxies, verify=MOCK_ANY)
+        m_get.assert_called_once_with(
+            f'{api.api_url}/test',
+            auth=MOCK_ANY,
+            headers=MOCK_ANY,
+            params=MOCK_ANY,
+            proxies=proxies,
+            verify=MOCK_ANY,
+        )
+
 
         api._request('/test', method='POST')
 
-        m_post.assert_called_with(api.api_url + '/test', auth=MOCK_ANY,
-                                  headers=MOCK_ANY, data=MOCK_ANY,
-                                  files=None, proxies=proxies,
-                                  verify=MOCK_ANY)
+        m_post.assert_called_with(
+            f'{api.api_url}/test',
+            auth=MOCK_ANY,
+            headers=MOCK_ANY,
+            data=MOCK_ANY,
+            files=None,
+            proxies=proxies,
+            verify=MOCK_ANY,
+        )
 
     @responses.activate
     def test_reauthenticates_if_logged_out_http_401(self):
@@ -397,16 +419,27 @@ class TestVMRay(unittest.TestCase):
                                         proxies=proxies)
         api._request('/test')
 
-        m_get.assert_called_once_with(api.api_url + '/test', auth=MOCK_ANY,
-                                      headers=MOCK_ANY, params=MOCK_ANY,
-                                      proxies=proxies, verify=MOCK_ANY)
+        m_get.assert_called_once_with(
+            f'{api.api_url}/test',
+            auth=MOCK_ANY,
+            headers=MOCK_ANY,
+            params=MOCK_ANY,
+            proxies=proxies,
+            verify=MOCK_ANY,
+        )
+
 
         api._request('/test', method='POST')
 
-        m_post.assert_called_once_with(api.api_url + '/test', auth=MOCK_ANY,
-                                       headers=MOCK_ANY, data=MOCK_ANY,
-                                       files=None, proxies=proxies,
-                                       verify=MOCK_ANY)
+        m_post.assert_called_once_with(
+            f'{api.api_url}/test',
+            auth=MOCK_ANY,
+            headers=MOCK_ANY,
+            data=MOCK_ANY,
+            files=None,
+            proxies=proxies,
+            verify=MOCK_ANY,
+        )
 
 
 class TestTriage(unittest.TestCase):
@@ -530,16 +563,27 @@ class TestFalcon(unittest.TestCase):
                                           proxies=proxies)
         api._request('/test')
 
-        m_get.assert_called_once_with(api.api_url + '/test', auth=MOCK_ANY,
-                                      headers=MOCK_ANY, params=MOCK_ANY,
-                                      proxies=proxies, verify=MOCK_ANY)
+        m_get.assert_called_once_with(
+            f'{api.api_url}/test',
+            auth=MOCK_ANY,
+            headers=MOCK_ANY,
+            params=MOCK_ANY,
+            proxies=proxies,
+            verify=MOCK_ANY,
+        )
+
 
         api._request('/test', method='POST')
 
-        m_post.assert_called_once_with(api.api_url + '/test', auth=MOCK_ANY,
-                                       headers=MOCK_ANY, data=MOCK_ANY,
-                                       files=None, proxies=proxies,
-                                       verify=MOCK_ANY)
+        m_post.assert_called_once_with(
+            f'{api.api_url}/test',
+            auth=MOCK_ANY,
+            headers=MOCK_ANY,
+            data=MOCK_ANY,
+            files=None,
+            proxies=proxies,
+            verify=MOCK_ANY,
+        )
 
 
 class TestSandboxAPI(unittest.TestCase):

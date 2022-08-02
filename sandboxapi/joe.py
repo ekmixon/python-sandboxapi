@@ -56,21 +56,14 @@ class JoeAPI(sandboxapi.SandboxAPI):
         :rtype:  bool
         :return: True if service is available, False otherwise.
         """
-        # if the availability flag is raised, return True immediately.
-        # NOTE: subsequent API failures will lower this flag. we do this here
-        # to ensure we don't keep hitting Joe with requests while availability
-        # is there.
         if self.server_available:
             return True
 
-        # otherwise, we have to check with the cloud.
-        else:
-
-            try:
-                self.server_available = self.jbx.server_online()
-                return self.server_available
-            except jbxapi.JoeException:
-                pass
+        try:
+            self.server_available = self.jbx.server_online()
+            return self.server_available
+        except jbxapi.JoeException:
+            pass
 
         self.server_available = False
         return False
