@@ -80,16 +80,13 @@ class SandboxAPI(object):
                     response = requests.get(full_url, params=params, headers=headers,
                                             verify=self.verify_ssl, auth=auth, proxies=self.proxies)
 
-                # if the status code is 503, is no longer available.
-                if response.status_code >= 500:
-                    # server error
-                    self.server_available = False
-                    raise SandboxError("server returned {c} status code on {u}, assuming unavailable...".format(
-                        c=response.status_code, u=response.url))
-                else:
+                if response.status_code < 500:
                     return response
 
-            # 0.4, 1.6, 6.4, 25.6, ...
+                # server error
+                self.server_available = False
+                raise SandboxError("server returned {c} status code on {u}, assuming unavailable...".format(
+                    c=response.status_code, u=response.url))
             except requests.exceptions.RequestException:
                 time.sleep(random.uniform(0, 4 ** i * 100 / 1000.0))
 

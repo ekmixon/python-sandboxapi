@@ -133,9 +133,7 @@ class TriageAPI(sandboxapi.SandboxAPI):
             raise sandboxapi.SandboxError(
                 "Triage api only supports the json report format")
 
-        data = self.request("/samples/{:s}/summary".format(item_id))
-
-        return data
+        return self.request("/samples/{:s}/summary".format(item_id))
 
     def score(self, item_id):
         """Gives back the highest score choosing from all the analyses
@@ -151,9 +149,8 @@ class TriageAPI(sandboxapi.SandboxAPI):
 
         # Loop over the available reports to pick the highest score
         for task_id, task in report["tasks"].items():
-            if "score" in task:
-                if task["score"] > score:
-                    score = task["score"]
+            if "score" in task and task["score"] > score:
+                score = task["score"]
 
         return score
 

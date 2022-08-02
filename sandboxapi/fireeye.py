@@ -22,11 +22,7 @@ class FireEyeAPI(sandboxapi.SandboxAPI):
         self.api_token = None
         self.verify_ssl = verify_ssl
 
-        if legacy_api:
-            # Use v1.1.0 endpoints for v7.x appliances.
-            self.api_url = url + '/wsapis/v1.1.0'
-        else:
-            self.api_url = url + '/wsapis/v1.2.0'
+        self.api_url = f'{url}/wsapis/v1.1.0' if legacy_api else f'{url}/wsapis/v1.2.0'
 
     def _request(self, uri, method='GET', params=None, files=None, headers=None, auth=None):
         """Override the parent _request method.
@@ -102,14 +98,13 @@ class FireEyeAPI(sandboxapi.SandboxAPI):
         response = self._request("/submissions", method='POST', params=data, files=files)
 
         try:
-            if response.status_code == 200:
-                # good response
-                try:
-                    return response.json()['ID']
-                except TypeError:
-                    return response.json()[0]['ID']
-            else:
+            if response.status_code != 200:
                 raise sandboxapi.SandboxError("api error in analyze ({u}): {r}".format(u=response.url, r=response.content))
+            # good response
+            try:
+                return response.json()['ID']
+            except TypeError:
+                return response.json()[0]['ID']
         except (ValueError, KeyError) as e:
             raise sandboxapi.SandboxError("error in analyze: {e}".format(e=e))
 
@@ -144,25 +139,19 @@ class FireEyeAPI(sandboxapi.SandboxAPI):
         :rtype:  bool
         :return: True if service is available, False otherwise.
         """
-        # if the availability flag is raised, return True immediately.
-        # NOTE: subsequent API failures will lower this flag. we do this here
-        # to ensure we don't keep hitting FireEye with requests while
-        # availability is there.
         if self.server_available:
             return True
 
-        # otherwise, we have to check with the cloud.
-        else:
-            try:
-                response = self._request("/config")
+        try:
+            response = self._request("/config")
 
-                # we've got fireeye.
-                if response.status_code == 200:
-                    self.server_available = True
-                    return True
+            # we've got fireeye.
+            if response.status_code == 200:
+                self.server_available = True
+                return True
 
-            except sandboxapi.SandboxError:
-                pass
+        except sandboxapi.SandboxError:
+            pass
 
         self.server_available = False
         return False
@@ -198,11 +187,7 @@ class FireEyeAPI(sandboxapi.SandboxAPI):
 
     def score(self, report):
         """Pass in the report from self.report(), get back an int."""
-        score = 0
-        if report['alert'][0]['severity'] == 'MAJR':
-            score = 8
-
-        return score
+        return 8 if report['alert'][0]['severity'] == 'MAJR' else 0
 
     def logout(self):
         """The FireEye AX has a limit of 100 concurrent sessions, so be sure to logout"""

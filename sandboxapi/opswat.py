@@ -49,19 +49,18 @@ class OpswatAPI(sandboxapi.SandboxAPI):
 
         try:
             response = self._request("/file", method='POST', headers=headers, files=files)
-            if response.status_code == 200:
-                # good response
-                try:
-                    if 'sha256' in response.json():
-                        sha256 = response.json()['sha256']
-                        response = self._request(
-                            "/hash/{sha256}/sandbox".format(sha256=sha256), headers=headers)
-                        if "scan_in_progress" in response.json():
-                            return response.json()['scan_in_progress']
-                except (ValueError, KeyError) as e:
-                    raise sandboxapi.SandboxError("error in analyze: {e}".format(e=e))
-            else:
+            if response.status_code != 200:
                 raise sandboxapi.SandboxError("api error in analyze ({u}): {r}".format(u=response.url, r=response.content))
+            # good response
+            try:
+                if 'sha256' in response.json():
+                    sha256 = response.json()['sha256']
+                    response = self._request(
+                        "/hash/{sha256}/sandbox".format(sha256=sha256), headers=headers)
+                    if "scan_in_progress" in response.json():
+                        return response.json()['scan_in_progress']
+            except (ValueError, KeyError) as e:
+                raise sandboxapi.SandboxError("error in analyze: {e}".format(e=e))
         except (ValueError, KeyError) as e:
             raise sandboxapi.SandboxError("error in analyze: {e}".format(e=e))
 
@@ -96,25 +95,19 @@ class OpswatAPI(sandboxapi.SandboxAPI):
         :rtype:  bool
         :return: True if service is available, False otherwise.
         """
-        # if the availability flag is raised, return True immediately.
-        # NOTE: subsequent API failures will lower this flag. we do this here
-        # to ensure we don't keep hitting Opswat with requests while
-        # availability is there.
         if self.server_available:
             return True
 
-        # otherwise, we have to check with the cloud.
-        else:
-            try:
-                response = self._request("/status")
+        try:
+            response = self._request("/status")
 
-                # we've got opswat.
-                if response.status_code == 200:
-                    self.server_available = True
-                    return True
+            # we've got opswat.
+            if response.status_code == 200:
+                self.server_available = True
+                return True
 
-            except sandboxapi.SandboxError:
-                pass
+        except sandboxapi.SandboxError:
+            pass
 
         self.server_available = False
         return False
@@ -155,11 +148,7 @@ class OpswatAPI(sandboxapi.SandboxAPI):
 
     def score(self, report):
         """Pass in the report from self.report(), get back an int."""
-        score = 0
-        if report['analysis']['infection_score']:
-            score = report['analysis']['infection_score']
-
-        return score
+        return report['analysis']['infection_score'] or 0
 
 
 def opswat_loop(opswat, filename):

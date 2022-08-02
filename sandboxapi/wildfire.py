@@ -25,7 +25,7 @@ class WildFireAPI(sandboxapi.SandboxAPI):
         """
         super(WildFireAPI, self).__init__(**kwargs)
         self.base_url = url or 'https://wildfire.paloaltonetworks.com'
-        self.api_url = self.base_url + '/publicapi'
+        self.api_url = f'{self.base_url}/publicapi'
         self._api_key = api_key
         self._score = BENIGN
         self.verify_ssl = verify_ssl
@@ -49,13 +49,15 @@ class WildFireAPI(sandboxapi.SandboxAPI):
         response = self._request('/submit/file', method='POST', files=files, params=data)
 
         try:
-            if response.status_code == 200:
-                output = self.decode(response)
-                return output['wildfire']['upload-file-info']['sha256']
-            else:
-                raise sandboxapi.SandboxError("api error in analyze ({}): {}".format(response.url, response.content))
+            if response.status_code != 200:
+                raise sandboxapi.SandboxError(
+                    f"api error in analyze ({response.url}): {response.content}"
+                )
+
+            output = self.decode(response)
+            return output['wildfire']['upload-file-info']['sha256']
         except (ValueError, KeyError, IndexError) as e:
-            raise sandboxapi.SandboxError("error in analyze {}".format(e))
+            raise sandboxapi.SandboxError(f"error in analyze {e}")
 
     def decode(self, response):
         """Convert a xml response to a python dictionary.
@@ -85,7 +87,7 @@ class WildFireAPI(sandboxapi.SandboxAPI):
         response = self._request('/get/verdict', method='POST', params=data)
 
         if not response.ok:
-            raise sandboxapi.SandboxError("{}: {}".format(response.status_code, response.content))
+            raise sandboxapi.SandboxError(f"{response.status_code}: {response.content}")
 
         output = self.decode(response)
         try:
@@ -118,10 +120,7 @@ class WildFireAPI(sandboxapi.SandboxAPI):
             # Making a GET request to the API should always give a code 405 if the service is running.
             # Relying on this fact to get a reliable 405 if the service is up.
             response = self._request('/get/sample', params={'apikey': self._api_key})
-            if response.status_code == 405:
-                return True
-            else:
-                return False
+            return response.status_code == 405
         except sandboxapi.SandboxError:
             return False
 
@@ -140,7 +139,7 @@ class WildFireAPI(sandboxapi.SandboxAPI):
         }
         response = self._request('/get/report', method='POST', params=data)
         if not response.ok:
-            raise sandboxapi.SandboxError("{}: {}".format(response.status_code, response.content))
+            raise sandboxapi.SandboxError(f"{response.status_code}: {response.content}")
         return self.decode(response)
 
     def score(self):
@@ -162,7 +161,8 @@ class WildFireAPI(sandboxapi.SandboxAPI):
 if __name__ == "__main__":
 
     def usage():
-        msg = "{}: <url> <api_key> available | submit <fh> | report <hash> | check <hash>".format(sys.argv[0])
+        msg = f"{sys.argv[0]}: <url> <api_key> available | submit <fh> | report <hash> | check <hash>"
+
         print(msg)
         sys.exit(1)
 

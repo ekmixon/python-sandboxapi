@@ -30,7 +30,7 @@ class CuckooAPI(sandboxapi.SandboxAPI):
             self.api_url = url
         else:
             # This is for backwards compatability and will be removed in a future version.
-            self.api_url = 'http://' + url + ':' + str(port) + api_path
+            self.api_url = f'http://{url}:{str(port)}{api_path}'
 
         self.verify_ssl = verify_ssl
 
@@ -90,7 +90,7 @@ class CuckooAPI(sandboxapi.SandboxAPI):
         try:
             content = json.loads(response.content.decode('utf-8'))
             status = content['task']["status"]
-            if status == 'completed' or status == "reported":
+            if status in ['completed', "reported"]:
                 return True
 
         except ValueError as e:
@@ -124,25 +124,19 @@ class CuckooAPI(sandboxapi.SandboxAPI):
         :rtype:  bool
         :return: True if service is available, False otherwise.
         """
-        # if the availability flag is raised, return True immediately.
-        # NOTE: subsequent API failures will lower this flag. we do this here
-        # to ensure we don't keep hitting Cuckoo with requests while
-        # availability is there.
         if self.server_available:
             return True
 
-        # otherwise, we have to check with the cloud.
-        else:
-            try:
-                response = self._request("cuckoo/status")
+        try:
+            response = self._request("cuckoo/status")
 
-                # we've got cuckoo.
-                if response.status_code == 200:
-                    self.server_available = True
-                    return True
+            # we've got cuckoo.
+            if response.status_code == 200:
+                self.server_available = True
+                return True
 
-            except sandboxapi.SandboxError:
-                pass
+        except sandboxapi.SandboxError:
+            pass
 
         self.server_available = False
         return False

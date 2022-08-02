@@ -13,7 +13,7 @@ class VMRayAPI(sandboxapi.SandboxAPI):
         sandboxapi.SandboxAPI.__init__(self, **kwargs)
 
         self.base_url = url or 'https://cloud.vmray.com'
-        self.api_url = self.base_url + '/rest'
+        self.api_url = f'{self.base_url}/rest'
         self.api_key = api_key
         self.verify_ssl = verify_ssl
 
@@ -81,25 +81,19 @@ class VMRayAPI(sandboxapi.SandboxAPI):
         :rtype:  bool
         :return: True if service is available, False otherwise.
         """
-        # if the availability flag is raised, return True immediately.
-        # NOTE: subsequent API failures will lower this flag. we do this here
-        # to ensure we don't keep hitting VMRay with requests while
-        # availability is there.
         if self.server_available:
             return True
 
-        # otherwise, we have to check with the cloud.
-        else:
-            try:
-                response = self._request("/system_info", headers=self.headers)
+        try:
+            response = self._request("/system_info", headers=self.headers)
 
-                # we've got vmray.
-                if response.status_code == 200:
-                    self.server_available = True
-                    return True
+            # we've got vmray.
+            if response.status_code == 200:
+                self.server_available = True
+                return True
 
-            except sandboxapi.SandboxError:
-                pass
+        except sandboxapi.SandboxError:
+            pass
 
         self.server_available = False
         return False
